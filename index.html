@@ -2,7 +2,7 @@
 <html lang="id">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
   <title>Sistem Absensi Pintar</title>
   
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -11,157 +11,55 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script> 
-  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   
   <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    
-    /* Splash Screen */
-    .splash-screen {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background: linear-gradient(135deg, #1e1b4b 0%, #312e81 50%, #4f46e5 100%);
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      z-index: 9999;
-      transition: opacity 0.5s ease, visibility 0.5s ease;
-    }
-    .splash-logo {
-      width: 100px;
-      height: 100px;
-      background: rgba(255,255,255,0.2);
-      border-radius: 30px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      margin-bottom: 20px;
-      animation: pulse 1.5s infinite;
-    }
-    .splash-logo i {
-      font-size: 50px;
-      color: white;
-    }
-    .splash-title {
-      font-size: 28px;
-      font-weight: bold;
-      color: white;
-      margin-bottom: 10px;
-      letter-spacing: 2px;
-    }
-    .splash-subtitle {
-      font-size: 14px;
-      color: rgba(255,255,255,0.7);
-      margin-bottom: 30px;
-    }
-    .splash-progress {
-      width: 200px;
-      height: 4px;
-      background: rgba(255,255,255,0.3);
-      border-radius: 4px;
-      overflow: hidden;
-    }
-    .splash-progress-bar {
-      width: 0%;
-      height: 100%;
-      background: white;
-      border-radius: 4px;
-      animation: loading 2s ease forwards;
-    }
-    @keyframes loading {
-      0% { width: 0%; }
-      100% { width: 100%; }
-    }
-    @keyframes pulse {
-      0%, 100% { transform: scale(1); opacity: 1; }
-      50% { transform: scale(1.05); opacity: 0.8; }
-    }
-    .splash-screen.fade-out {
-      opacity: 0;
-      visibility: hidden;
-    }
-    
-    /* Custom Scrollbar */
-    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar { width: 4px; }
     ::-webkit-scrollbar-track { background: #f1f1f1; }
     ::-webkit-scrollbar-thumb { background: #c7c7c7; border-radius: 10px; }
-    ::-webkit-scrollbar-thumb:hover { background: #a8a8a8; }
-
-    /* Animations */
-    .animate-fade-in { animation: fadeIn 0.4s cubic-bezier(0.4, 0, 0.2, 1); }
-    .animate-slide-up { animation: slideUp 0.4s cubic-bezier(0.4, 0, 0.2, 1); }
-    
-    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-    @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
-
-    /* Glass Effect */
-    .glass {
-      background: rgba(255, 255, 255, 0.95);
-      backdrop-filter: blur(10px);
-      -webkit-backdrop-filter: blur(10px);
-    }
-    
-    /* View State */
+    .animate-fade-in { animation: fadeIn 0.3s ease; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
     .view-section { display: none; }
     .view-section.active { display: block; }
-
-    /* Loading Progress Bar */
-    .loading-progress { transition: width 0.3s ease; }
-    
-    /* Toast Notifications */
     .toast-slide-in { animation: slideInRight 0.3s ease forwards; }
     .toast-slide-out { animation: slideOutRight 0.3s ease forwards; }
     @keyframes slideInRight { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
     @keyframes slideOutRight { from { transform: translateX(0); opacity: 1; } to { transform: translateX(100%); opacity: 0; } }
+    .spinner { width: 36px; height: 36px; border: 3px solid #e0e7ff; border-top-color: #4f46e5; border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 1rem; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .sidebar { transition: width 0.3s ease, transform 0.3s ease; }
+    .sidebar-collapsed { width: 70px !important; }
+    .sidebar-collapsed .sidebar-label { display: none !important; }
+    .main-content { transition: margin-left 0.3s ease; }
   </style>
 </head>
-<body class="bg-slate-900 font-sans antialiased text-slate-800 selection:bg-indigo-500 selection:text-white overflow-x-hidden">
+<body class="bg-slate-900 overflow-x-hidden">
 
 <!-- SPLASH SCREEN -->
-<div id="splashScreen" class="splash-screen">
-  <div class="splash-logo">
-    <i class="fas fa-school"></i>
-  </div>
-  <h1 class="splash-title">PINTAR</h1>
-  <p class="splash-subtitle">Presensi & Informasi Tarbiyatusshibyan</p>
-  <div class="splash-progress">
-    <div class="splash-progress-bar"></div>
-  </div>
-  <p class="text-white text-xs mt-4 opacity-60">Loading...</p>
+<div id="splashScreen" class="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 transition-opacity duration-500">
+  <img src="https://files.catbox.moe/3od6ig.png" alt="Logo" class="w-28 h-28 mb-5 object-contain animate-pulse">
+    <h1 class="text-2xl font-bold text-white mb-2">SISTEM ABSENSI</h1>
+  <p class="text-slate-300 text-sm mb-6">Presensi & Informasi Tarbiyatusshibyan</p>
+  <div class="w-48 h-1 bg-white/20 rounded-full overflow-hidden"><div class="w-0 h-full bg-white rounded-full transition-all duration-1000" id="splashProgress"></div></div>
 </div>
 
-<!-- LOADING PROGRESS OVERLAY -->
-<div id="loadingProgressOverlay" class="fixed inset-0 z-[100] hidden flex-col items-center justify-center bg-black/80 backdrop-blur-md">
-  <div class="bg-white rounded-2xl p-8 w-80 text-center shadow-2xl">
-    <div class="mb-4"><i class="fas fa-spinner fa-spin text-4xl text-indigo-600"></i></div>
-    <h3 class="font-bold text-gray-800 mb-2" id="loadingTitle">Memproses...</h3>
-    <p class="text-xs text-gray-500 mb-4" id="loadingMessage">Harap tunggu sebentar</p>
-    <div class="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
-      <div id="loadingProgressBar" class="loading-progress bg-indigo-600 h-2 rounded-full" style="width: 0%"></div>
-    </div>
-  </div>
+<!-- LOADING OVERLAY -->
+<div id="loadingOverlay" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-[100] hidden flex items-center justify-center">
+  <div class="bg-white rounded-2xl p-5 text-center"><div class="spinner"></div><p class="text-gray-600 text-sm mt-2">Memproses...</p></div>
 </div>
 
 <!-- NOTIFICATION PANEL -->
-<div id="notificationPanel" class="fixed top-16 right-4 z-50 w-80 bg-white rounded-xl shadow-2xl border border-gray-200 hidden overflow-hidden">
+<div id="notificationPanel" class="fixed top-16 right-3 z-50 w-72 bg-white rounded-xl shadow-2xl border border-gray-200 hidden overflow-hidden">
   <div class="p-3 bg-indigo-600 text-white flex justify-between items-center">
-    <h3 class="font-bold text-sm"><i class="fas fa-bell mr-2"></i> Notifikasi</h3>
-    <div class="flex gap-2">
-      <button onclick="markAllNotificationsRead()" class="text-xs text-indigo-200 hover:text-white">Tandai semua</button>
-      <button onclick="toggleNotificationPanel()" class="text-white hover:text-indigo-200">✕</button>
-    </div>
+    <h3 class="font-bold text-xs"><i class="fas fa-bell mr-1"></i> Notifikasi</h3>
+    <button onclick="closeNotificationPanel()" class="text-white"><i class="fas fa-times text-xs"></i></button>
   </div>
-  <div id="notificationList" class="max-h-96 overflow-y-auto divide-y divide-gray-100">
-    <div class="p-4 text-center text-gray-500 text-sm">Memuat notifikasi...</div>
+  <div id="notificationList" class="max-h-80 overflow-y-auto divide-y divide-gray-100">
+    <div class="p-3 text-center text-gray-500 text-xs">Memuat...</div>
   </div>
   <div class="p-2 border-t border-gray-100 text-center">
-    <button onclick="loadAdminNotifications()" class="text-xs text-indigo-600 hover:text-indigo-800">🔄 Refresh</button>
+    <button onclick="loadAdminNotifications()" class="text-xs text-indigo-600">🔄 Refresh</button>
   </div>
 </div>
 
@@ -170,674 +68,561 @@
 
 <!-- LOGIN PAGE -->
 <div id="loginPage" class="relative min-h-screen flex items-center justify-center p-4 overflow-hidden" style="display: none;">
-  <div class="absolute inset-0 z-0">
-    <div class="absolute inset-0 bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900"></div>
-    <div class="absolute top-0 left-0 w-full h-full bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-5"></div>
-    <div class="absolute top-[-10%] left-[-10%] w-96 h-96 bg-indigo-600 rounded-full mix-blend-multiply filter blur-[128px] opacity-40 animate-pulse"></div>
-    <div class="absolute bottom-[-10%] right-[-10%] w-96 h-96 bg-purple-600 rounded-full mix-blend-multiply filter blur-[128px] opacity-40 animate-pulse" style="animation-delay: 2s"></div>
-  </div>
+  <div class="absolute inset-0 bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900"></div>
+  <div class="absolute top-[-10%] left-[-10%] w-80 h-80 bg-indigo-600 rounded-full mix-blend-multiply filter blur-[128px] opacity-40 animate-pulse"></div>
+  <div class="absolute bottom-[-10%] right-[-10%] w-80 h-80 bg-purple-600 rounded-full mix-blend-multiply filter blur-[128px] opacity-40 animate-pulse"></div>
 
-  <div class="relative z-10 w-full max-w-5xl bg-white/10 backdrop-blur-2xl rounded-3xl shadow-2xl overflow-hidden border border-white/10 flex flex-col lg:flex-row animate-fade-in">
-    <div class="w-full lg:w-5/12 relative p-10 flex flex-col justify-between text-white overflow-hidden group">
-      <div class="absolute inset-0 bg-cover bg-center transition-transform duration-1000 group-hover:scale-110" style="background-image: url('https://images.unsplash.com/photo-1523050854058-8df90110c9f1?ixlib=rb-4.0.3&auto=format&fit=crop&w=1470&q=80');"></div>
+  <div class="relative z-10 w-full max-w-4xl bg-white/10 backdrop-blur-2xl rounded-2xl shadow-2xl overflow-hidden border border-white/10 flex flex-col md:flex-row">
+    <div class="w-full md:w-5/12 relative p-6 flex flex-col justify-between text-white overflow-hidden" style="min-height: 260px;">
+      <div class="absolute inset-0 bg-cover bg-center" style="background-image: url('https://images.unsplash.com/photo-1523050854058-8df90110c9f1?ixlib=rb-4.0.3&auto=format&fit=crop&w=1470&q=80');"></div>
       <div class="absolute inset-0 bg-gradient-to-t from-indigo-900/90 via-indigo-900/60 to-indigo-900/40"></div>
       <div class="relative z-10">
-        <div class="flex items-center gap-3 mb-6">
-          <div class="w-10 h-10 rounded-xl bg-white/20 backdrop-blur-md flex items-center justify-center border border-white/30 shadow-lg"><i class="fas fa-school text-xl"></i></div>
-          <span class="font-bold tracking-wider text-sm opacity-90">MA PLUS KETERAMPILAN TARBIYATUSSHIBYAN</span>
-        </div>
-        <h1 class="text-4xl lg:text-5xl font-bold leading-tight mb-4 text-transparent bg-clip-text bg-gradient-to-r from-white to-indigo-200 drop-shadow-sm">Presensi & Informasi<br> Tarbiyatusshibyan</h1>
-        <p class="text-indigo-100 text-sm leading-relaxed max-w-xs opacity-90">Platform manajemen kehadiran siswa yang terintegrasi, real-time, dan mudah digunakan.</p>
+        <div class="flex items-center gap-2 mb-3"><div class="w-8 h-8 rounded-xl bg-white/20 backdrop-blur-md flex items-center justify-center"><i class="fas fa-school text-white"></i></div><span class="font-bold text-xs opacity-90">MA PLUS TARBIYATUSSHIBYAN</span></div>
+        <h1 class="text-xl md:text-2xl font-bold leading-tight text-transparent bg-clip-text bg-gradient-to-r from-white to-indigo-200">Presensi & Informasi</h1>
+        <p class="text-indigo-100 text-xs mt-2 opacity-90">Platform manajemen kehadiran siswa yang terintegrasi.</p>
       </div>
-      <div class="relative z-10 mt-10">
-        <div class="flex gap-2 mb-4"><span class="h-1 w-8 bg-white rounded-full"></span><span class="h-1 w-2 bg-white/30 rounded-full"></span><span class="h-1 w-2 bg-white/30 rounded-full"></span></div>
-        <div class="flex gap-4 text-xs font-medium text-indigo-200"><div class="px-3 py-1.5 rounded-lg bg-white/10 backdrop-blur-md border border-white/10">v2</div><div class="px-3 py-1.5 rounded-lg bg-white/10 backdrop-blur-md border border-white/10">Secure Login</div></div>
-      </div>
+      <div class="relative z-10 mt-4"><div class="flex gap-1"><span class="h-1 w-6 bg-white rounded-full"></span><span class="h-1 w-2 bg-white/30 rounded-full"></span><span class="h-1 w-2 bg-white/30 rounded-full"></span></div><div class="flex gap-2 mt-2"><div class="px-2 py-0.5 rounded-lg bg-white/10 backdrop-blur-md text-[9px]">v2</div><div class="px-2 py-0.5 rounded-lg bg-white/10 backdrop-blur-md text-[9px]">Secure Login</div></div></div>
     </div>
-    <div class="w-full lg:w-7/12 bg-white p-8 lg:p-12 flex flex-col justify-center relative">
-      <div class="max-w-md mx-auto w-full">
-        <div class="text-center mb-8">
-          <h2 class="text-2xl font-bold text-gray-900">Assalamualaikum Warahmatullahi Wabarakatu</h2>
-          <h2 class="text-2xl font-bold text-gray-400">Selamat Datang Kembali</h2>
-          <p class="text-gray-500 text-sm mt-2">Silakan masuk ke akun Anda</p>
+    <div class="w-full md:w-7/12 bg-white p-6">
+      <div class="max-w-sm mx-auto">
+        <div class="text-center mb-5"><h2 class="text-lg font-bold text-gray-800">Selamat Datang</h2><p class="text-gray-500 text-xs">Silakan masuk ke akun Anda</p></div>
+        <div class="bg-gray-50 p-1 rounded-xl flex mb-4">
+          <button id="btnSiswaTab" class="flex-1 py-1.5 text-xs font-semibold rounded-lg bg-white text-indigo-600 shadow-sm flex items-center justify-center gap-1"><i class="fas fa-user-graduate text-xs"></i> Siswa</button>
+          <button id="btnAdminTab" class="flex-1 py-1.5 text-xs font-medium rounded-lg text-gray-500 flex items-center justify-center gap-1"><i class="fas fa-chalkboard-teacher text-xs"></i> Guru/Admin</button>
         </div>
-        <div class="bg-gray-50 p-1.5 rounded-xl flex mb-8 border border-gray-100 relative">
-          <button id="btnSiswaTab" class="flex-1 py-3 text-sm font-bold rounded-lg shadow-sm bg-white text-indigo-600 ring-1 ring-black/5 transition-all duration-300 flex items-center justify-center gap-2"><i class="fas fa-user-graduate"></i> Siswa</button>
-          <button id="btnAdminTab" class="flex-1 py-3 text-sm font-medium rounded-lg text-gray-500 hover:text-gray-700 hover:bg-gray-100 transition-all duration-300 flex items-center justify-center gap-2"><i class="fas fa-chalkboard-teacher"></i> Guru / Admin</button>
-        </div>
-        <form onsubmit="handleLogin(event)" class="space-y-5">
-          <div id="formSiswaLogin" class="animate-fade-in">
-            <label class="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2 ml-1">NISN Siswa</label>
-            <div class="relative group">
-              <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-gray-400 group-focus-within:text-indigo-600 transition-colors"><i class="far fa-id-card text-lg"></i></div>
-              <input type="text" id="nisn" class="block w-full pl-12 pr-4 py-4 bg-gray-50 border-gray-200 border rounded-xl text-gray-900 text-sm focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all placeholder-gray-400" placeholder="Masukkan Nomor Induk Siswa">
-            </div>
-          </div>
-          <div id="formAdminLogin" class="hidden space-y-5 animate-fade-in">
-            <div><label class="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2 ml-1">Username</label><div class="relative group"><div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-gray-400 group-focus-within:text-indigo-600 transition-colors"><i class="far fa-user text-lg"></i></div><input type="text" id="username" class="block w-full pl-12 pr-4 py-4 bg-gray-50 border-gray-200 border rounded-xl text-gray-900 text-sm focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all placeholder-gray-400" placeholder="Username akun"></div></div>
-            <div><label class="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2 ml-1">Password</label><div class="relative group"><div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-gray-400 group-focus-within:text-indigo-600 transition-colors"><i class="fas fa-lock text-lg"></i></div><input type="password" id="password" class="block w-full pl-12 pr-4 py-4 bg-gray-50 border-gray-200 border rounded-xl text-gray-900 text-sm focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all placeholder-gray-400" placeholder="••••••••"></div></div>
-          </div>
-          <button type="submit" class="w-full py-4 px-6 bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 text-white font-bold rounded-xl shadow-lg shadow-indigo-500/30 transition-all transform active:scale-[0.98] text-sm flex justify-center items-center gap-2 group"><span>MASUK SEKARANG</span> <i class="fas fa-arrow-right group-hover:translate-x-1 transition-transform"></i></button>
+        <form id="loginForm">
+          <div id="formSiswaLogin"><input type="text" id="nisn" class="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm mb-3" placeholder="NISN"></div>
+          <div id="formAdminLogin" class="hidden"><input type="text" id="username" class="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm mb-2" placeholder="Username"><input type="password" id="password" class="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm" placeholder="Password"></div>
+          <button type="submit" class="w-full mt-4 bg-indigo-600 text-white py-2 rounded-xl font-semibold text-sm">MASUK</button>
         </form>
-        <div id="loginError" class="mt-6 hidden p-4 bg-rose-50 border border-rose-100 rounded-xl flex items-start gap-3 animate-fade-in"><div class="p-2 bg-rose-100 rounded-full text-rose-600 shrink-0"><i class="fas fa-exclamation-triangle text-xs"></i></div><div><h4 class="text-sm font-bold text-rose-700">Akses Ditolak</h4><p id="errorText" class="text-xs text-rose-600 mt-0.5">Username atau password salah.</p></div></div>
+        <div id="loginError" class="mt-3 hidden p-2 bg-rose-50 rounded-lg text-center"><p id="errorText" class="text-rose-600 text-xs">Login gagal</p></div>
+        <p class="text-center text-[10px] text-gray-400 mt-3">Demo: admin/admin123 | guru1/guru123 | NISN: 1234567890</p>
       </div>
     </div>
   </div>
-  <p class="absolute bottom-6 text-slate-500 text-xs font-medium opacity-60">© 2026 Sistem Absensi Sekolah. v2.0</p>
 </div>
 
-<!-- DASHBOARD CONTAINER -->
-<div id="dashboardContainer" class="hidden flex h-screen overflow-hidden bg-[#F3F4F6]">
-  <aside id="sidebar" class="fixed inset-y-0 left-0 z-40 w-64 text-white transform -translate-x-full md:translate-x-0 transition-all duration-300 ease-in-out flex flex-col h-full shadow-2xl border-r border-indigo-900/30" style="background-color: rgb(26, 25, 103);">
-    <div id="sidebarHeader" class="h-16 flex items-center justify-start px-6 border-b border-indigo-900/50 overflow-hidden relative transition-all duration-300">
-      <div class="absolute top-0 left-0 w-full h-full bg-white/5 pointer-events-none"></div>
-      <div class="flex items-center space-x-3 relative z-10 w-full">
-        <div class="w-8 h-8 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-lg flex items-center justify-center text-white shadow-lg shadow-indigo-900/50 shrink-0 transition-all duration-300"><i class="fas fa-qrcode text-sm"></i></div>
-        <div class="sidebar-label transition-opacity duration-300 whitespace-nowrap"><h1 class="font-bold text-base tracking-wide text-white">PINTAR</h1><p class="text-[8px] text-indigo-200 tracking-wider font-semibold">Presensi & Informasi Tarbiyatusshibyan</p></div>
+<!-- DASHBOARD -->
+<div id="dashboardContainer" class="hidden flex h-screen overflow-hidden bg-gray-100">
+  <!-- SIDEBAR -->
+  <aside id="sidebar" class="sidebar fixed inset-y-0 left-0 z-40 w-64 text-white flex flex-col h-full shadow-2xl" style="background: #1a1967;">
+    <div class="flex items-center justify-between px-4 py-3 border-b border-indigo-900/50">
+      <div class="flex items-center gap-2">
+        <div class="w-7 h-7 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-lg flex items-center justify-center"><i class="fas fa-qrcode text-white text-xs"></i></div>
+        <span class="font-bold text-sm sidebar-label">PINTAR</span>
+      </div>
+      <button id="toggleSidebarBtn" class="text-white/70 hover:text-white transition-transform">
+        <i class="fas fa-chevron-left text-xs"></i>
+      </button>
+    </div>
+    <div class="p-3">
+      <div class="flex items-center gap-2 p-2 bg-black/20 rounded-lg">
+        <div id="navUserInitial" class="w-7 h-7 rounded-lg bg-gradient-to-tr from-cyan-500 to-blue-600 flex items-center justify-center font-bold text-xs">U</div>
+        <div class="sidebar-label"><p id="navUserName" class="font-semibold text-xs">User</p><span id="navUserRole" class="text-[8px] font-bold uppercase bg-indigo-800 px-1 py-0.5 rounded">Role</span></div>
       </div>
     </div>
-    <div class="p-4 overflow-hidden transition-all duration-300">
-      <div id="userProfileCard" class="flex items-center space-x-3 p-3 bg-black/20 rounded-xl border border-white/10 transition-all duration-300 overflow-hidden">
-        <div id="navUserInitial" class="w-8 h-8 rounded-lg bg-gradient-to-tr from-cyan-500 to-blue-600 flex items-center justify-center font-bold text-sm shadow-inner shrink-0 text-white">U</div>
-        <div id="userInfo" class="sidebar-label transition-opacity duration-300 whitespace-nowrap"><p id="navUserName" class="font-semibold text-xs truncate text-white max-w-[120px]">User</p><span id="navUserRole" class="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold uppercase bg-indigo-800 text-indigo-100 border border-indigo-700 tracking-wider">Role</span></div>
-      </div>
-    </div>
-    <nav id="sidebarMenu" class="flex-1 overflow-y-auto overflow-x-hidden px-3 space-y-1 pb-4 scrollbar-hide text-sm"></nav>
-    <div class="p-4 border-t border-indigo-900/50 bg-black/10">
-      <button onclick="logout()" id="btnLogout" class="flex items-center space-x-3 text-red-300 hover:text-white hover:bg-red-500/20 w-full p-2.5 rounded-lg transition duration-200 group overflow-hidden whitespace-nowrap justify-start"><i class="fas fa-sign-out-alt w-5 text-center shrink-0 group-hover:scale-110 transition-transform text-sm"></i><span class="sidebar-label font-medium transition-opacity duration-300 text-xs">Keluar Aplikasi</span></button>
+    <nav id="sidebarMenu" class="flex-1 overflow-y-auto px-2 space-y-1 pb-4"></nav>
+    <div class="p-3 border-t border-indigo-900/50">
+      <button onclick="logout()" class="flex items-center gap-2 text-red-300 hover:text-white hover:bg-red-500/20 w-full p-2 rounded-lg transition text-xs">
+        <i class="fas fa-sign-out-alt text-xs"></i><span class="sidebar-label">Keluar</span>
+      </button>
     </div>
   </aside>
 
-  <div id="mobileOverlay" onclick="toggleSidebar()" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-30 hidden transition-opacity duration-300 opacity-0"></div>
+  <div id="mobileOverlay" onclick="closeSidebarMobile()" class="fixed inset-0 bg-black/50 z-30 hidden"></div>
 
-  <main id="mainContent" class="flex-1 flex flex-col md:ml-64 h-screen relative transition-all duration-300 overflow-hidden bg-[#F3F4F6]">
-    <header class="h-16 bg-white/80 backdrop-blur-xl sticky top-0 z-20 flex items-center justify-between px-6 border-b border-slate-200/70 shadow-sm">
-      <div class="flex items-center">
-        <button onclick="toggleSidebar()" class="mr-3 p-1.5 text-slate-500 hover:bg-slate-100 hover:text-slate-800 rounded-lg transition-colors"><i class="fas fa-bars text-lg"></i></button>
-        <div><h2 id="pageTitle" class="text-lg font-bold text-slate-800 tracking-tight">Dashboard</h2></div>
+  <main id="mainContent" class="main-content flex-1 flex flex-col h-screen overflow-hidden" style="margin-left: 256px;">
+    <header class="h-14 bg-white shadow-sm flex items-center justify-between px-4">
+      <div class="flex items-center gap-2">
+        <button id="mobileMenuBtn" onclick="toggleSidebarMobile()" class="p-1.5 rounded-lg hover:bg-gray-100 md:hidden"><i class="fas fa-bars text-gray-600"></i></button>
+        <button id="desktopMenuBtn" onclick="toggleSidebarDesktop()" class="p-1.5 rounded-lg hover:bg-gray-100 hidden md:block"><i class="fas fa-bars text-gray-600"></i></button>
+        <h2 id="pageTitle" class="text-base font-bold text-gray-800">Dashboard</h2>
       </div>
-      <div class="flex items-center space-x-4">
-        <div class="text-right hidden md:block">
-          <p class="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">Hari ini</p>
-          <p class="text-xs font-bold text-slate-700" id="currentDateDisplay"></p>
-        </div>
-        <div id="notificationBell" class="relative cursor-pointer" onclick="toggleNotificationPanel()">
-          <div class="w-8 h-8 rounded-full bg-white border border-slate-200 flex items-center justify-center text-slate-600 hover:bg-slate-50 transition shadow-sm"><i class="far fa-bell text-sm"></i></div>
-          <span class="notification-badge absolute -top-1 -right-1 bg-red-500 text-white text-[9px] rounded-full w-4 h-4 flex items-center justify-center hidden">0</span>
+      <div class="flex items-center gap-3">
+        <p id="currentDateDisplay" class="text-[10px] text-gray-500 hidden md:block"></p>
+        <div class="relative cursor-pointer" onclick="toggleNotificationPanel()">
+          <div class="w-7 h-7 rounded-full bg-gray-100 flex items-center justify-center"><i class="far fa-bell text-gray-500 text-sm"></i></div>
+          <span id="notifBadge" class="absolute -top-1 -right-1 bg-red-500 text-white text-[8px] rounded-full w-3.5 h-3.5 flex items-center justify-center hidden">0</span>
         </div>
       </div>
     </header>
-    <div id="mainContentArea" class="flex-1 overflow-y-auto p-4 md:p-6 pb-24 scroll-smooth"></div>
+    <div id="mainContentArea" class="flex-1 overflow-y-auto p-3 md:p-4"></div>
   </main>
 </div>
 
-<div id="modalContainer"></div>
-
 <script>
 // ==========================================================================
-// API CONFIGURATION
+// API CONFIG
 // ==========================================================================
 const API_BASE = 'https://absensi-api-delta.vercel.app/api';
 
 // ==========================================================================
-// GLOBAL STATE
+// GLOBAL
 // ==========================================================================
 let currentUser = null;
 let html5QrCode = null;
-let isScanning = false;
-let isSidebarOpen = true;
-let existingClasses = [];
-let guruChartInstance = null;
-let adminChartInstance = null;
-let loadingProgressInterval = null;
+let adminChart = null;
+let guruChart = null;
 let notificationInterval = null;
-
-// Table State
-const tableState = {
-    siswa: { fullData: [], filtered: [], limit: 10, page: 1, search: '', classFilter: '' },
-    guru: { fullData: [], filtered: [], limit: 10, page: 1, search: '', classFilter: '' },
-    libur: { fullData: [], filtered: [], limit: 10, page: 1, search: '' },
-    rekap: { fullData: [], filtered: [], limit: 10, page: 1, search: '' },
-    monitoring: { fullData: [], filtered: [], limit: 10, page: 1, search: '', statusFilter: '' }
-};
+let isSidebarOpen = true;
 
 // ==========================================================================
-// LOADING FUNCTIONS
+// HELPER FUNCTIONS
 // ==========================================================================
-function showLoadingProgress(title, message) {
-    if (loadingProgressInterval) clearInterval(loadingProgressInterval);
-    document.getElementById('loadingTitle').innerHTML = title || 'Memproses...';
-    document.getElementById('loadingMessage').innerHTML = message || 'Harap tunggu sebentar';
-    document.getElementById('loadingProgressBar').style.width = '0%';
-    document.getElementById('loadingProgressOverlay').classList.remove('hidden');
-    let progress = 0;
-    loadingProgressInterval = setInterval(() => { progress += Math.random() * 15; if (progress > 90) progress = 90; document.getElementById('loadingProgressBar').style.width = progress + '%'; }, 200);
+function showLoading() { document.getElementById('loadingOverlay').classList.remove('hidden'); }
+function hideLoading() { document.getElementById('loadingOverlay').classList.add('hidden'); }
+function showAlert(type, msg) { Swal.fire({ icon: type, title: type==='success'?'Berhasil!':'Gagal!', text: msg, toast: true, position: 'top-end', showConfirmButton: false, timer: 2500 }); }
+function showToast(title, msg, type='info') {
+  const c = document.getElementById('toastContainer');
+  const colors = { success:'bg-green-500', error:'bg-red-500', info:'bg-blue-500' };
+  const icons = { success:'fa-check-circle', error:'fa-exclamation-circle', info:'fa-info-circle' };
+  const toast = document.createElement('div');
+  toast.className = `${colors[type]} text-white p-2 rounded-lg shadow-lg flex items-start gap-2 toast-slide-in min-w-[240px] text-xs`;
+  toast.innerHTML = `<i class="fas ${icons[type]} mt-0.5 text-xs"></i><div class="flex-1"><p class="font-bold text-[10px]">${title}</p><p class="text-[9px] opacity-90">${msg}</p></div><button onclick="this.parentElement.remove()" class="text-white/70">✕</button>`;
+  c.appendChild(toast);
+  setTimeout(() => { if(toast.parentElement){ toast.classList.add('toast-slide-out'); setTimeout(()=>toast.remove(),250); } }, 4000);
 }
-function hideLoadingProgress() {
-    if (loadingProgressInterval) { clearInterval(loadingProgressInterval); loadingProgressInterval = null; }
-    document.getElementById('loadingProgressBar').style.width = '100%';
-    setTimeout(() => { document.getElementById('loadingProgressOverlay').classList.add('hidden'); document.getElementById('loadingProgressBar').style.width = '0%'; }, 300);
-}
-function showLoading() { const overlay = document.getElementById('loadingOverlay'); if (overlay) overlay.classList.remove('hidden'); }
-function hideLoading() { const overlay = document.getElementById('loadingOverlay'); if (overlay) overlay.classList.add('hidden'); }
-
-// ==========================================================================
-// API HELPER
-// ==========================================================================
-async function apiRequest(endpoint, method = 'GET', body = null) {
-    const headers = { 'Content-Type': 'application/json' };
-    if (currentUser?.token) headers['Authorization'] = `Bearer ${currentUser.token}`;
-    const response = await fetch(`${API_BASE}${endpoint}`, { method, headers, body: body ? JSON.stringify(body) : null });
-    if (!response.ok && response.status === 401) { logout(); throw new Error('Session expired'); }
-    return response.json();
+async function apiCall(endpoint, method='GET', body=null) {
+  const headers = { 'Content-Type': 'application/json' };
+  if (currentUser?.token) headers['Authorization'] = `Bearer ${currentUser.token}`;
+  const res = await fetch(`${API_BASE}${endpoint}`, { method, headers, body: body ? JSON.stringify(body) : null });
+  if (res.status === 401) logout();
+  return res.json();
 }
 
 // ==========================================================================
-// DATE SETUP
+// SPLASH SCREEN & DATE
 // ==========================================================================
-const dateOptions = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
-document.getElementById('currentDateDisplay').textContent = new Date().toLocaleDateString('id-ID', dateOptions);
-
-// ==========================================================================
-// SPLASH SCREEN
-// ==========================================================================
-window.addEventListener('load', function() {
-    setTimeout(function() {
-        const splash = document.getElementById('splashScreen');
-        splash.classList.add('fade-out');
-        setTimeout(function() {
-            splash.style.display = 'none';
-            document.getElementById('loginPage').style.display = 'flex';
-        }, 500);
-    }, 2000);
+window.addEventListener('load', () => {
+  let width = 0;
+  const interval = setInterval(() => { width += 10; if(width>=100){ width=100; clearInterval(interval); } document.getElementById('splashProgress').style.width = width+'%'; }, 80);
+  setTimeout(() => { document.getElementById('splashScreen').style.opacity = '0'; setTimeout(() => { document.getElementById('splashScreen').style.display = 'none'; document.getElementById('loginPage').style.display = 'flex'; }, 400); }, 1400);
 });
+document.getElementById('currentDateDisplay').innerHTML = new Date().toLocaleDateString('id-ID', { weekday:'short', day:'numeric', month:'short', year:'numeric' });
 
 // ==========================================================================
-// SESSION MANAGEMENT
+// SIDEBAR TOGGLE
 // ==========================================================================
-function checkSession() {
-    const storedSession = localStorage.getItem('absensiAppSession');
-    if (storedSession) {
-        try {
-            const sessionData = JSON.parse(storedSession);
-            if (sessionData && sessionData.success) {
-                currentUser = sessionData;
-                document.getElementById('loginPage').style.display = 'none';
-                document.getElementById('dashboardContainer').classList.remove('hidden');
-                if (window.innerWidth < 768) document.getElementById('sidebar').classList.add('-translate-x-full');
-                initDashboard();
-            }
-        } catch (e) { localStorage.removeItem('absensiAppSession'); }
-    }
+function toggleSidebarDesktop() {
+  const sidebar = document.getElementById('sidebar');
+  const main = document.getElementById('mainContent');
+  const labels = document.querySelectorAll('.sidebar-label');
+  const toggleBtn = document.getElementById('toggleSidebarBtn');
+  
+  if (isSidebarOpen) {
+    sidebar.style.width = '70px';
+    main.style.marginLeft = '70px';
+    labels.forEach(el => el.style.display = 'none');
+    toggleBtn.innerHTML = '<i class="fas fa-chevron-right text-xs"></i>';
+    isSidebarOpen = false;
+  } else {
+    sidebar.style.width = '256px';
+    main.style.marginLeft = '256px';
+    labels.forEach(el => el.style.display = 'inline');
+    toggleBtn.innerHTML = '<i class="fas fa-chevron-left text-xs"></i>';
+    isSidebarOpen = true;
+  }
 }
 
-// ==========================================================================
-// UI NAVIGATION
-// ==========================================================================
-function showView(viewId, content) {
-    const mainArea = document.getElementById('mainContentArea');
-    if (!mainArea) return;
-    if (content) mainArea.innerHTML = content;
-    document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
-    const target = document.getElementById(viewId);
-    if (target) target.classList.add('active');
-}
-function setActiveMenu(targetName) {
-    const allLinks = document.querySelectorAll('#sidebarMenu a');
-    const centerClass = !isSidebarOpen ? 'justify-center px-0' : 'space-x-3 px-4';
-    const baseStyle = `flex items-center ${centerClass} py-3 rounded-xl transition-all duration-200 group overflow-hidden whitespace-nowrap cursor-pointer `;
-    const activeStyle = "bg-indigo-600 text-white shadow-lg shadow-indigo-900/50";
-    const inactiveStyle = "text-gray-400 hover:bg-gray-800 hover:text-white";
-    allLinks.forEach(link => {
-        const menuName = link.getAttribute('data-name');
-        if (menuName === targetName) link.className = baseStyle + activeStyle;
-        else link.className = baseStyle + inactiveStyle;
-    });
-}
-function toggleSidebar() {
-    const sidebar = document.getElementById('sidebar'), main = document.getElementById('mainContent'), overlay = document.getElementById('mobileOverlay');
-    const labels = document.querySelectorAll('.sidebar-label'), header = document.getElementById('sidebarHeader'), userCard = document.getElementById('userProfileCard');
-    const logoutBtn = document.getElementById('btnLogout'), menuLinks = document.querySelectorAll('#sidebarMenu a');
-    const isMobile = window.innerWidth < 768;
-    if (isMobile) {
-        if (sidebar.classList.contains('-translate-x-full')) { sidebar.classList.remove('-translate-x-full'); overlay.classList.remove('hidden'); setTimeout(() => overlay.classList.remove('opacity-0'), 10); }
-        else { sidebar.classList.add('-translate-x-full'); overlay.classList.add('opacity-0'); setTimeout(() => overlay.classList.add('hidden'), 300); }
-    } else {
-        if (isSidebarOpen) {
-            sidebar.classList.remove('w-64'); sidebar.classList.add('w-20');
-            main.classList.remove('md:ml-64'); main.classList.add('md:ml-20');
-            header.classList.remove('px-6', 'justify-start'); header.classList.add('px-0', 'justify-center');
-            userCard.classList.remove('space-x-3', 'p-3', 'bg-black/20', 'border'); userCard.classList.add('justify-center', 'p-0', 'bg-transparent', 'border-transparent');
-            logoutBtn.classList.remove('space-x-3', 'justify-start', 'px-4'); logoutBtn.classList.add('justify-center', 'px-0');
-            menuLinks.forEach(link => { link.classList.remove('space-x-3', 'px-4'); link.classList.add('justify-center', 'px-0'); });
-            labels.forEach(el => el.classList.add('hidden'));
-            isSidebarOpen = false;
-        } else {
-            sidebar.classList.remove('w-20'); sidebar.classList.add('w-64');
-            main.classList.remove('md:ml-20'); main.classList.add('md:ml-64');
-            header.classList.add('px-6', 'justify-start'); header.classList.remove('px-0', 'justify-center');
-            userCard.classList.add('space-x-3', 'p-3', 'bg-black/20', 'border'); userCard.classList.remove('justify-center', 'p-0', 'bg-transparent', 'border-transparent');
-            logoutBtn.classList.add('space-x-3', 'justify-start', 'px-4'); logoutBtn.classList.remove('justify-center', 'px-0');
-            menuLinks.forEach(link => { link.classList.add('space-x-3', 'px-4'); link.classList.remove('justify-center', 'px-0'); });
-            labels.forEach(el => el.classList.remove('hidden'));
-            isSidebarOpen = true;
-        }
-    }
-}
-function closeSidebarMobile() { if (window.innerWidth < 768) { document.getElementById('sidebar').classList.add('-translate-x-full'); const overlay = document.getElementById('mobileOverlay'); overlay.classList.add('opacity-0'); setTimeout(() => overlay.classList.add('hidden'), 300); } }
-function switchLoginTab(tab) {
-    document.getElementById('loginError').classList.add('hidden');
-    const btnSiswa = document.getElementById('btnSiswaTab'), btnAdmin = document.getElementById('btnAdminTab');
-    const activeClass = "bg-white text-indigo-600 shadow-sm", inactiveClass = "text-gray-500 hover:text-gray-700 hover:bg-gray-200";
-    btnSiswa.className = `flex-1 py-2.5 text-sm font-semibold rounded-lg transition-all duration-200 ${tab === 'siswa' ? activeClass : inactiveClass}`;
-    btnAdmin.className = `flex-1 py-2.5 text-sm font-semibold rounded-lg transition-all duration-200 ${tab === 'admin' ? activeClass : inactiveClass}`;
-    if (tab === 'admin') { document.getElementById('formAdminLogin').classList.remove('hidden'); document.getElementById('formSiswaLogin').classList.add('hidden'); }
-    else { document.getElementById('formAdminLogin').classList.add('hidden'); document.getElementById('formSiswaLogin').classList.remove('hidden'); }
+function toggleSidebarMobile() {
+  const sidebar = document.getElementById('sidebar');
+  const overlay = document.getElementById('mobileOverlay');
+  sidebar.classList.toggle('-translate-x-full');
+  overlay.classList.toggle('hidden');
 }
 
-// ==========================================================================
-// AUTHENTICATION - DIPERBAIKI UNTUK GURU
-// ==========================================================================
-async function handleLogin(event) {
-    event.preventDefault();
-    showLoadingProgress('Login', 'Memverifikasi akun Anda...');
-    const username = document.getElementById('username').value;
-    const password = document.getElementById('password').value;
-    const nisn = document.getElementById('nisn').value;
-    const isAdminMode = !document.getElementById('formAdminLogin').classList.contains('hidden');
-    
-    let body = {};
-    if (isAdminMode) {
-        if (!username || !password) {
-            hideLoadingProgress();
-            Swal.fire('Error', 'Username dan password harus diisi', 'error');
-            return;
-        }
-        body = { username, password };
-    } else {
-        if (!nisn) {
-            hideLoadingProgress();
-            Swal.fire('Error', 'NISN harus diisi', 'error');
-            return;
-        }
-        body = { nisn };
-    }
-    
-    console.log('Login attempt:', body);
-    
-    try {
-        const response = await fetch(`${API_BASE}/auth/login`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(body)
-        });
-        const result = await response.json();
-        console.log('Login response:', result);
-        hideLoadingProgress();
-        
-        if (result.success) {
-            currentUser = result;
-            localStorage.setItem('absensiAppSession', JSON.stringify(result));
-            document.getElementById('loginPage').style.display = 'none';
-            document.getElementById('dashboardContainer').classList.remove('hidden');
-            initDashboard();
-            Swal.fire({ icon: 'success', title: 'Login Berhasil!', text: `Selamat datang ${result.nama}`, timer: 2000, showConfirmButton: false });
-        } else {
-            const errorDiv = document.getElementById('loginError');
-            document.getElementById('errorText').textContent = result.message;
-            errorDiv.classList.remove('hidden');
-            setTimeout(() => errorDiv.classList.add('hidden'), 5000);
-        }
-    } catch (error) {
-        hideLoadingProgress();
-        console.error('Login error:', error);
-        Swal.fire('Error', 'Gagal terhubung ke server: ' + error.message, 'error');
-    }
-}
-function logout() {
-    if (html5QrCode) html5QrCode.stop().catch(() => {});
-    if (notificationInterval) clearInterval(notificationInterval);
-    localStorage.removeItem('absensiAppSession');
-    currentUser = null;
-    document.getElementById('dashboardContainer').classList.add('hidden');
-    document.getElementById('loginPage').style.display = 'flex';
-    document.getElementById('username').value = ''; document.getElementById('password').value = ''; document.getElementById('nisn').value = '';
+function closeSidebarMobile() {
+  if (window.innerWidth < 768) {
     document.getElementById('sidebar').classList.add('-translate-x-full');
+    document.getElementById('mobileOverlay').classList.add('hidden');
+  }
 }
-function refreshData(type) {
-    if (type === 'siswa') { tableState.siswa.fullData = []; loadDataSiswa(); }
-    else if (type === 'guru') { tableState.guru.fullData = []; loadDataGuru(); }
-    else if (type === 'dashboard') { if (currentUser.role === 'admin') loadAdminDashboard(); else if (currentUser.role === 'guru') loadGuruDashboard(); else loadSiswaDashboard(); }
-    else if (type === 'monitoring') { tableState.monitoring.fullData = []; loadMonitoringAbsensi(); }
-    showAlert('success', 'Data diperbarui');
+
+// Event listeners untuk toggle buttons
+document.getElementById('toggleSidebarBtn').onclick = toggleSidebarDesktop;
+document.getElementById('desktopMenuBtn').onclick = toggleSidebarDesktop;
+document.getElementById('mobileMenuBtn').onclick = toggleSidebarMobile;
+
+function closeNotificationPanel() { document.getElementById('notificationPanel').classList.add('hidden'); }
+
+// ==========================================================================
+// LOGIN
+// ==========================================================================
+document.getElementById('btnSiswaTab').onclick = function() {
+  this.className = "flex-1 py-1.5 text-xs font-semibold rounded-lg bg-white text-indigo-600 shadow-sm flex items-center justify-center gap-1";
+  document.getElementById('btnAdminTab').className = "flex-1 py-1.5 text-xs font-medium rounded-lg text-gray-500 flex items-center justify-center gap-1";
+  document.getElementById('formSiswaLogin').classList.remove('hidden');
+  document.getElementById('formAdminLogin').classList.add('hidden');
+};
+document.getElementById('btnAdminTab').onclick = function() {
+  this.className = "flex-1 py-1.5 text-xs font-semibold rounded-lg bg-white text-indigo-600 shadow-sm flex items-center justify-center gap-1";
+  document.getElementById('btnSiswaTab').className = "flex-1 py-1.5 text-xs font-medium rounded-lg text-gray-500 flex items-center justify-center gap-1";
+  document.getElementById('formSiswaLogin').classList.add('hidden');
+  document.getElementById('formAdminLogin').classList.remove('hidden');
+};
+document.getElementById('loginForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  showLoading();
+  const isAdmin = !document.getElementById('formAdminLogin').classList.contains('hidden');
+  const body = isAdmin ? { username: document.getElementById('username').value.trim(), password: document.getElementById('password').value.trim() } : { nisn: document.getElementById('nisn').value.trim() };
+  try {
+    const res = await fetch(`${API_BASE}/auth/login`, { method:'POST', headers:{ 'Content-Type':'application/json' }, body:JSON.stringify(body) });
+    const result = await res.json();
+    hideLoading();
+    if (result.success) {
+      currentUser = result;
+      localStorage.setItem('session', JSON.stringify(result));
+      document.getElementById('loginPage').style.display = 'none';
+      document.getElementById('dashboardContainer').classList.remove('hidden');
+      initDashboard();
+      showAlert('success', `Selamat datang ${result.nama}`);
+    } else {
+      document.getElementById('loginError').classList.remove('hidden');
+      document.getElementById('errorText').innerText = result.message;
+      setTimeout(() => document.getElementById('loginError').classList.add('hidden'), 3000);
+    }
+  } catch(e) { hideLoading(); showAlert('error', 'Gagal koneksi'); }
+});
+function logout() {
+  if (html5QrCode) html5QrCode?.stop().catch(()=>{});
+  if (notificationInterval) clearInterval(notificationInterval);
+  localStorage.removeItem('session');
+  currentUser = null;
+  document.getElementById('dashboardContainer').classList.add('hidden');
+  document.getElementById('loginPage').style.display = 'flex';
+  document.getElementById('username').value = ''; document.getElementById('password').value = ''; document.getElementById('nisn').value = '';
+  closeSidebarMobile();
 }
-function showAlert(type, message) { Swal.fire({ icon: type, title: type === 'success' ? 'Berhasil!' : 'Gagal!', text: message, toast: true, position: 'top-end', showConfirmButton: false, timer: 3000 }); }
-function closeModal() { document.getElementById('modalContainer').innerHTML = ''; }
-function showModal(content) { document.getElementById('modalContainer').innerHTML = `<div class="fixed inset-0 z-50 flex items-center justify-center p-4"><div class="absolute inset-0 bg-gray-900/60 backdrop-blur-sm" onclick="closeModal()"></div><div class="relative w-full max-w-2xl transform transition-all animate-fade-in">${content}</div></div>`; }
-function animateValue(id, start, end, duration) { const obj = document.getElementById(id); if (!obj) return; let startTimestamp = null; const step = (timestamp) => { if (!startTimestamp) startTimestamp = timestamp; const progress = Math.min((timestamp - startTimestamp) / duration, 1); obj.innerHTML = Math.floor(progress * (end - start) + start); if (progress < 1) requestAnimationFrame(step); }; requestAnimationFrame(step); }
 
 // ==========================================================================
 // DASHBOARD INIT
 // ==========================================================================
-async function initDashboard() {
-    const name = currentUser.nama || currentUser.username;
-    document.getElementById('navUserName').textContent = name;
-    document.getElementById('navUserRole').textContent = currentUser.role.toUpperCase();
-    document.getElementById('navUserInitial').textContent = name.charAt(0).toUpperCase();
-
-    const menuContainer = document.getElementById('sidebarMenu');
-    let menuHTML = '';
-    const createItem = (label, icon, onclick, isDefaultActive = false) => {
-        const hideText = !isSidebarOpen ? 'hidden' : ''; 
-        const centerClass = !isSidebarOpen ? 'justify-center px-0' : 'space-x-3 px-4';
-        const baseStyle = `flex items-center ${centerClass} py-3 rounded-xl transition-all duration-200 group overflow-hidden whitespace-nowrap cursor-pointer `;
-        const activeStyle = "bg-indigo-600 text-white shadow-lg shadow-indigo-900/50";
-        const inactiveStyle = "text-gray-400 hover:bg-gray-800 hover:text-white";
-        const currentStyle = isDefaultActive ? (baseStyle + activeStyle) : (baseStyle + inactiveStyle);
-        return `<a data-name="${label}" onclick="${onclick}" class="${currentStyle}"><i class="fas ${icon} w-6 text-center flex-shrink-0 group-hover:scale-110 transition-transform"></i><span class="sidebar-label font-medium transition-opacity duration-300 ${hideText}">${label}</span></a>`;
-    };
-    if (currentUser.role === 'admin') {
-        menuHTML += createItem('Dashboard', 'fa-home', 'loadAdminDashboard()', true);
-        menuHTML += createItem('Data Siswa', 'fa-user-graduate', 'loadDataSiswa()');
-        menuHTML += createItem('Data Guru', 'fa-chalkboard-teacher', 'loadDataGuru()');
-        menuHTML += createItem('Laporan', 'fa-clipboard-list', 'loadRekapAbsensi()');
-        menuHTML += createItem('Kelola Absen', 'fa-calendar-times', 'loadKelolaAbsen()');
-        menuHTML += createItem('Scan Absensi', 'fa-qrcode', 'loadScanAbsensi()');
-        loadAdminDashboard();
-    } else if (currentUser.role === 'guru') {
-        menuHTML += createItem('Dashboard', 'fa-home', 'loadGuruDashboard()', true);
-        menuHTML += createItem('Monitoring', 'fa-eye', 'loadMonitoringAbsensi()');
-        menuHTML += createItem('Scan Absensi', 'fa-qrcode', 'loadScanAbsensi()');
-        loadGuruDashboard();
-    } else if (currentUser.role === 'siswa') {
-        menuHTML += createItem('Dashboard', 'fa-home', 'loadSiswaDashboard()', true);
-        menuHTML += createItem('Kartu Saya', 'fa-id-card', 'loadQRCodeSiswa()');
-        loadSiswaDashboard();
-    }
-    menuContainer.innerHTML = menuHTML;
-    await loadKelasSuggestions();
-    if (currentUser.role === 'admin' || currentUser.role === 'guru') {
-        startNotificationPolling();
-        loadAdminNotifications();
-    }
-}
-async function loadKelasSuggestions() {
-    if (!currentUser?.token) return;
-    try { const result = await apiRequest('/siswa/kelas'); if (result.success) existingClasses = result.data; } catch (error) { console.error('Failed to load kelas:', error); }
+function initDashboard() {
+  document.getElementById('navUserName').innerHTML = currentUser.nama || currentUser.username;
+  document.getElementById('navUserRole').innerHTML = currentUser.role.toUpperCase();
+  document.getElementById('navUserInitial').innerHTML = (currentUser.nama || currentUser.username).charAt(0).toUpperCase();
+  
+  const menu = document.getElementById('sidebarMenu');
+  let html = '';
+  if (currentUser.role === 'admin') {
+    html += '<button onclick="loadAdminDashboard()" class="w-full flex items-center gap-2 p-2 rounded-lg text-gray-300 hover:bg-gray-800 hover:text-white text-xs"><i class="fas fa-home w-4"></i><span class="sidebar-label">Dashboard</span></button>';
+    html += '<button onclick="loadDataSiswa()" class="w-full flex items-center gap-2 p-2 rounded-lg text-gray-300 hover:bg-gray-800 hover:text-white text-xs"><i class="fas fa-users w-4"></i><span class="sidebar-label">Data Siswa</span></button>';
+    html += '<button onclick="loadDataGuru()" class="w-full flex items-center gap-2 p-2 rounded-lg text-gray-300 hover:bg-gray-800 hover:text-white text-xs"><i class="fas fa-chalkboard-user w-4"></i><span class="sidebar-label">Data Guru</span></button>';
+    html += '<button onclick="showAddGuruModal()" class="w-full flex items-center gap-2 p-2 rounded-lg text-gray-300 hover:bg-gray-800 hover:text-white text-xs"><i class="fas fa-user-plus w-4"></i><span class="sidebar-label">Tambah Guru</span></button>';
+    html += '<button onclick="loadKelolaLibur()" class="w-full flex items-center gap-2 p-2 rounded-lg text-gray-300 hover:bg-gray-800 hover:text-white text-xs"><i class="fas fa-calendar-alt w-4"></i><span class="sidebar-label">Hari Libur</span></button>';
+    html += '<button onclick="loadScanAbsensi()" class="w-full flex items-center gap-2 p-2 rounded-lg text-gray-300 hover:bg-gray-800 hover:text-white text-xs"><i class="fas fa-qrcode w-4"></i><span class="sidebar-label">Scan QR</span></button>';
+    loadAdminDashboard();
+  } else if (currentUser.role === 'guru') {
+    html += '<button onclick="loadGuruDashboard()" class="w-full flex items-center gap-2 p-2 rounded-lg text-gray-300 hover:bg-gray-800 hover:text-white text-xs"><i class="fas fa-home w-4"></i><span class="sidebar-label">Dashboard</span></button>';
+    html += '<button onclick="loadMonitoring()" class="w-full flex items-center gap-2 p-2 rounded-lg text-gray-300 hover:bg-gray-800 hover:text-white text-xs"><i class="fas fa-eye w-4"></i><span class="sidebar-label">Monitoring</span></button>';
+    html += '<button onclick="loadScanAbsensi()" class="w-full flex items-center gap-2 p-2 rounded-lg text-gray-300 hover:bg-gray-800 hover:text-white text-xs"><i class="fas fa-qrcode w-4"></i><span class="sidebar-label">Scan QR</span></button>';
+    loadGuruDashboard();
+  } else {
+    html += '<button onclick="loadSiswaDashboard()" class="w-full flex items-center gap-2 p-2 rounded-lg text-gray-300 hover:bg-gray-800 hover:text-white text-xs"><i class="fas fa-home w-4"></i><span class="sidebar-label">Dashboard</span></button>';
+    html += '<button onclick="loadQRCodeSiswa()" class="w-full flex items-center gap-2 p-2 rounded-lg text-gray-300 hover:bg-gray-800 hover:text-white text-xs"><i class="fas fa-id-card w-4"></i><span class="sidebar-label">Kartu Digital</span></button>';
+    loadSiswaDashboard();
+  }
+  menu.innerHTML = html;
+  if (currentUser.role === 'admin' || currentUser.role === 'guru') { startNotificationPolling(); loadAdminNotifications(); }
 }
 
 // ==========================================================================
-// TABLE FUNCTIONS
+// TAMBAH GURU (ADMIN)
 // ==========================================================================
-function handleTableLimit(type, limit) { tableState[type].limit = limit === 'all' ? Infinity : parseInt(limit); tableState[type].page = 1; processTableData(type); }
-function handleTableSearch(type, query) { tableState[type].search = query.toLowerCase(); tableState[type].page = 1; processTableData(type); }
-function handleTableClassFilter(type, value) { if (tableState[type]) { tableState[type].classFilter = value; tableState[type].page = 1; processTableData(type); } }
-function handleTableStatusFilter(type, status) { if (tableState[type]) { tableState[type].statusFilter = status; tableState[type].page = 1; processTableData(type); } }
-function changePage(type, direction) { const state = tableState[type]; const maxPage = Math.ceil(state.filtered.length / state.limit); const newPage = state.page + direction; if (newPage >= 1 && newPage <= maxPage) { state.page = newPage; processTableData(type); } }
-function updatePaginationUI(type, startIdx, currentCount, total, currentPage, totalPages) { const infoEl = document.getElementById(`info-${type}`); const btnPrev = document.getElementById(`btn-prev-${type}`); const btnNext = document.getElementById(`btn-next-${type}`); if (total === 0) { if (infoEl) infoEl.textContent = 'Tidak ada data ditemukan.'; if (btnPrev) btnPrev.disabled = true; if (btnNext) btnNext.disabled = true; } else { const end = startIdx + currentCount; if (infoEl) infoEl.textContent = `Menampilkan ${startIdx + 1} - ${end} dari ${total} data`; if (btnPrev) btnPrev.disabled = currentPage === 1; if (btnNext) btnNext.disabled = currentPage >= totalPages; } }
-function processTableData(type) {
-    const state = tableState[type];
-    let result = [...state.fullData];
-    if ((type === 'siswa' || type === 'guru') && state.classFilter) result = result.filter(item => item.kelas === state.classFilter);
-    if (type === 'monitoring' && state.statusFilter) result = result.filter(item => item.status === state.statusFilter);
-    if (state.search) { const query = state.search.toLowerCase(); result = result.filter(item => Object.values(item).some(val => String(val).toLowerCase().includes(query))); }
-    state.filtered = result;
-    const total = state.filtered.length, totalPages = Math.ceil(total / state.limit);
-    if (state.page > totalPages && totalPages > 0) state.page = totalPages;
-    if (total === 0) state.page = 1;
-    const startIdx = (state.page - 1) * state.limit;
-    const pagedData = state.filtered.slice(startIdx, startIdx + state.limit);
-    if (type === 'siswa') renderSiswaRows(pagedData, startIdx);
-    if (type === 'guru') renderGuruRows(pagedData, startIdx);
-    if (type === 'libur') renderLiburRows(pagedData, startIdx);
-    if (type === 'rekap') renderRekapRows(pagedData);
-    if (type === 'monitoring') renderMonitoringRows(pagedData, startIdx);
-    updatePaginationUI(type, startIdx, pagedData.length, total, state.page, totalPages);
+async function showAddGuruModal() {
+  if (currentUser.role !== 'admin') { showAlert('error', 'Akses ditolak. Hanya admin.'); return; }
+  
+  const { value: formValues } = await Swal.fire({
+    title: 'Tambah Guru Baru',
+    html: `
+      <input id="username" class="swal2-input" placeholder="Username" style="width:100%;margin-bottom:10px">
+      <input type="password" id="password" class="swal2-input" placeholder="Password" style="width:100%;margin-bottom:10px">
+      <input id="kelas" class="swal2-input" placeholder="Wali Kelas (opsional)" style="width:100%">
+    `,
+    focusConfirm: false,
+    showCancelButton: true,
+    confirmButtonText: 'Simpan',
+    cancelButtonText: 'Batal',
+    preConfirm: () => {
+      const username = document.getElementById('username').value.trim();
+      const password = document.getElementById('password').value.trim();
+      const kelas = document.getElementById('kelas').value.trim();
+      if (!username || !password) {
+        Swal.showValidationMessage('Username dan Password wajib diisi!');
+        return false;
+      }
+      return { username, password, kelas };
+    }
+  });
+  
+  if (formValues) {
+    showLoading();
+    try {
+      const result = await apiCall('/guru', 'POST', formValues);
+      if (result.success) {
+        showAlert('success', result.message);
+        loadDataGuru();
+      } else {
+        showAlert('error', result.message);
+      }
+    } catch (error) {
+      showAlert('error', 'Gagal menambahkan guru');
+    }
+    hideLoading();
+  }
 }
 
 // ==========================================================================
 // ADMIN DASHBOARD
 // ==========================================================================
 async function loadAdminDashboard() {
-    stopAndBack(false);
-    setActiveMenu('Dashboard');
-    const content = `<div id="view-admin-dashboard" class="view-section active animate-fade-in"><div class="flex flex-col md:flex-row justify-between items-end mb-8 gap-4"><div><h2 class="text-2xl font-bold text-gray-800 tracking-tight">Dashboard Admin</h2><p class="text-sm text-gray-500 mt-1">Pusat kontrol数据 absensi sekolah.</p></div><div class="flex items-center gap-3"><span class="text-xs font-bold bg-white text-gray-600 px-3 py-1.5 rounded-lg border border-gray-200 shadow-sm"><i class="far fa-clock mr-2"></i> <span id="adminDateDisplay">${new Date().toLocaleDateString('id-ID', dateOptions)}</span></span><button onclick="refreshData('dashboard')" class="flex items-center space-x-2 text-xs font-bold text-white bg-indigo-600 border border-indigo-600 px-4 py-2 rounded-lg shadow-md hover:bg-indigo-700 transition"><i class="fas fa-sync-alt"></i> <span>Refresh Data</span></button></div></div><div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-8"><div class="bg-white p-5 rounded-xl shadow-sm border border-indigo-100"><p class="text-[10px] font-bold text-gray-400">Total Siswa</p><h3 id="admStatTotal" class="text-2xl font-bold text-gray-800">-</h3></div><div class="bg-white p-5 rounded-xl shadow-sm border border-emerald-100"><p class="text-[10px] font-bold text-gray-400">Hadir</p><h3 id="admStatHadir" class="text-2xl font-bold text-gray-800">-</h3></div><div class="bg-white p-5 rounded-xl shadow-sm border border-yellow-100"><p class="text-[10px] font-bold text-gray-400">Sakit</p><h3 id="admStatSakit" class="text-2xl font-bold text-gray-800">-</h3></div><div class="bg-white p-5 rounded-xl shadow-sm border border-blue-100"><p class="text-[10px] font-bold text-gray-400">Izin</p><h3 id="admStatIzin" class="text-2xl font-bold text-gray-800">-</h3></div><div class="bg-white p-5 rounded-xl shadow-sm border border-red-100"><p class="text-[10px] font-bold text-gray-400">Alpa</p><h3 id="admStatAlpa" class="text-2xl font-bold text-gray-800">-</h3></div></div><div class="grid grid-cols-1 lg:grid-cols-3 gap-6"><div class="lg:col-span-2 bg-white rounded-2xl p-6 border border-gray-100 shadow-sm"><div class="flex justify-between items-center mb-6"><h3 class="text-sm font-bold text-gray-700 flex items-center"><i class="fas fa-chart-bar text-indigo-500 mr-2"></i> Grafik Statistik Kehadiran</h3></div><div class="relative w-full h-[350px]"><canvas id="adminAttendanceChart"></canvas></div></div><div class="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm h-full"><h3 class="font-bold text-gray-800 mb-4 flex items-center text-sm"><i class="fas fa-bolt text-amber-500 mr-2"></i> Akses Cepat</h3><div class="space-y-3"><button onclick="loadScanAbsensi()" class="w-full flex items-center p-3 rounded-xl border border-gray-100 hover:bg-indigo-50 hover:border-indigo-200 transition-all group text-left"><div class="w-10 h-10 rounded-lg bg-indigo-100 text-indigo-600 flex items-center justify-center mr-3 group-hover:scale-110 transition"><i class="fas fa-qrcode"></i></div><div><div class="font-bold text-xs text-gray-700">Scan Absensi</div><div class="text-[10px] text-gray-400">Mode scanner kamera</div></div></button><button onclick="loadDataSiswa()" class="w-full flex items-center p-3 rounded-xl border border-gray-100 hover:bg-blue-50 hover:border-blue-200 transition-all group text-left"><div class="w-10 h-10 rounded-lg bg-blue-100 text-blue-600 flex items-center justify-center mr-3 group-hover:scale-110 transition"><i class="fas fa-user-graduate"></i></div><div><div class="font-bold text-xs text-gray-700">Data Siswa</div><div class="text-[10px] text-gray-400">Kelola database siswa</div></div></button><button onclick="loadRekapAbsensi()" class="w-full flex items-center p-3 rounded-xl border border-gray-100 hover:bg-emerald-50 hover:border-emerald-200 transition-all group text-left"><div class="w-10 h-10 rounded-lg bg-emerald-100 text-emerald-600 flex items-center justify-center mr-3 group-hover:scale-110 transition"><i class="fas fa-file-alt"></i></div><div><div class="font-bold text-xs text-gray-700">Laporan</div><div class="text-[10px] text-gray-400">Export & rekap data</div></div></button><button onclick="loadKelolaAbsen()" class="w-full flex items-center p-3 rounded-xl border border-gray-100 hover:bg-rose-50 hover:border-rose-200 transition-all group text-left"><div class="w-10 h-10 rounded-lg bg-rose-100 text-rose-600 flex items-center justify-center mr-3 group-hover:scale-110 transition"><i class="fas fa-calendar-times"></i></div><div><div class="font-bold text-xs text-gray-700">Hari Libur</div><div class="text-[10px] text-gray-400">Setting tanggal merah</div></div></button></div></div></div></div>`;
-    showView('view-admin-dashboard', content);
-    try {
-        const result = await apiRequest('/monitoring/realtime');
-        if (result.success) {
-            const data = result.data, total = data.length, hadir = data.filter(d => d.status === 'Hadir').length, sakit = data.filter(d => d.status === 'Sakit').length, izin = data.filter(d => d.status === 'Izin').length, alpa = data.filter(d => d.status === 'Alpa').length, belum = data.filter(d => d.status === 'Belum Absen').length;
-            animateValue("admStatTotal", 0, total, 800); animateValue("admStatHadir", 0, hadir, 800); animateValue("admStatSakit", 0, sakit, 800); animateValue("admStatIzin", 0, izin, 800); animateValue("admStatAlpa", 0, alpa, 800);
-            const ctx = document.getElementById('adminAttendanceChart');
-            if (ctx && typeof Chart !== 'undefined') { if (adminChartInstance) adminChartInstance.destroy(); adminChartInstance = new Chart(ctx, { type: 'bar', data: { labels: ['Hadir', 'Sakit', 'Izin', 'Alpa', 'Belum Absen'], datasets: [{ label: 'Jumlah Siswa', data: [hadir, sakit, izin, alpa, belum], backgroundColor: ['#10B981', '#EAB308', '#3B82F6', '#EF4444', '#9CA3AF'], borderRadius: 8 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } } }); }
-        }
-    } catch (error) { console.error(error); }
+  document.getElementById('pageTitle').innerHTML = 'Dashboard Admin';
+  showLoading();
+  try {
+    const res = await apiCall('/monitoring/realtime');
+    hideLoading();
+    if (res.success) {
+      const data = res.data, total = data.length, hadir = data.filter(d=>d.status==='Hadir').length, sakit = data.filter(d=>d.status==='Sakit').length, izin = data.filter(d=>d.status==='Izin').length, alpa = data.filter(d=>d.status==='Alpa').length;
+      document.getElementById('mainContentArea').innerHTML = `
+        <div class="grid grid-cols-2 sm:grid-cols-5 gap-2 mb-4">
+          <div class="bg-white p-3 rounded-xl shadow-sm text-center border-l-4 border-indigo-500"><p class="text-gray-400 text-[10px]">Total</p><p class="text-xl font-bold">${total}</p></div>
+          <div class="bg-white p-3 rounded-xl shadow-sm text-center border-l-4 border-green-500"><p class="text-gray-400 text-[10px]">Hadir</p><p class="text-xl font-bold text-green-600">${hadir}</p></div>
+          <div class="bg-white p-3 rounded-xl shadow-sm text-center border-l-4 border-yellow-500"><p class="text-gray-400 text-[10px]">Sakit</p><p class="text-xl font-bold text-yellow-600">${sakit}</p></div>
+          <div class="bg-white p-3 rounded-xl shadow-sm text-center border-l-4 border-blue-500"><p class="text-gray-400 text-[10px]">Izin</p><p class="text-xl font-bold text-blue-600">${izin}</p></div>
+          <div class="bg-white p-3 rounded-xl shadow-sm text-center border-l-4 border-red-500"><p class="text-gray-400 text-[10px]">Alpa</p><p class="text-xl font-bold text-red-600">${alpa}</p></div>
+        </div>
+        <div class="bg-white rounded-xl p-3 shadow-sm mb-4"><canvas id="adminChart" height="200"></canvas></div>
+        <div class="grid grid-cols-2 gap-2">
+          <button onclick="loadDataSiswa()" class="bg-indigo-50 p-3 rounded-xl text-center"><i class="fas fa-users text-xl mb-1 block text-indigo-600"></i><span class="text-[10px] font-semibold">Data Siswa</span></button>
+          <button onclick="loadDataGuru()" class="bg-purple-50 p-3 rounded-xl text-center"><i class="fas fa-chalkboard-user text-xl mb-1 block text-purple-600"></i><span class="text-[10px]">Data Guru</span></button>
+          <button onclick="showAddGuruModal()" class="bg-emerald-50 p-3 rounded-xl text-center"><i class="fas fa-user-plus text-xl mb-1 block text-emerald-600"></i><span class="text-[10px]">Tambah Guru</span></button>
+          <button onclick="loadKelolaLibur()" class="bg-amber-50 p-3 rounded-xl text-center"><i class="fas fa-calendar-alt text-xl mb-1 block text-amber-600"></i><span class="text-[10px]">Hari Libur</span></button>
+        </div>
+      `;
+      const ctx = document.getElementById('adminChart').getContext('2d');
+      if (adminChart) adminChart.destroy();
+      adminChart = new Chart(ctx, { type:'bar', data:{ labels:['Hadir','Sakit','Izin','Alpa'], datasets:[{ label:'Jumlah', data:[hadir,sakit,izin,alpa], backgroundColor:['#10B981','#F59E0B','#3B82F6','#EF4444'], borderRadius:6 }] }, options:{ responsive:true, maintainAspectRatio:true, plugins:{ legend:{ display:false } }, scales:{ y:{ beginAtZero:true, ticks:{ stepSize:1 } } } } });
+    }
+  } catch(e) { hideLoading(); showAlert('error', 'Gagal load data'); }
 }
 
 // ==========================================================================
 // GURU DASHBOARD
 // ==========================================================================
 async function loadGuruDashboard() {
-    stopAndBack(false);
-    setActiveMenu('Dashboard');
-    const content = `<div id="view-guru-dashboard" class="view-section active animate-fade-in"><div class="flex flex-col md:flex-row justify-between items-end mb-8 gap-4"><div><h2 class="text-2xl font-bold text-gray-800 tracking-tight">Dashboard Guru</h2><p class="text-sm text-gray-500 mt-1">Ringkasan aktivitas siswa hari ini.</p></div><div class="flex items-center gap-3"><span class="text-xs font-bold bg-indigo-50 text-indigo-700 px-3 py-1.5 rounded-lg border border-indigo-100"><i class="far fa-calendar-alt mr-2"></i> <span id="guruDashboardDate">${new Date().toLocaleDateString('id-ID', dateOptions)}</span></span><button onclick="refreshData('dashboard')" class="flex items-center space-x-2 text-xs font-bold text-gray-600 bg-white border border-gray-200 px-4 py-2 rounded-lg shadow-sm hover:bg-gray-50 transition"><i class="fas fa-sync-alt"></i> <span>Refresh</span></button></div></div><div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8"><div class="relative overflow-hidden bg-white p-6 rounded-2xl shadow-sm border border-indigo-100 group hover:shadow-md transition-all"><div class="absolute top-0 right-0 w-24 h-24 bg-indigo-50 rounded-bl-full -mr-4 -mt-4 transition-transform group-hover:scale-110"></div><div class="relative z-10 flex flex-col h-full justify-between"><div class="w-12 h-12 bg-indigo-100 text-indigo-600 rounded-xl flex items-center justify-center text-xl mb-4 shadow-sm"><i class="fas fa-user-graduate"></i></div><div><p class="text-xs font-bold text-gray-400 uppercase tracking-wider">Total Siswa</p><h3 id="statGuruTotal" class="text-3xl font-bold text-gray-800 mt-1">-</h3></div></div></div><div class="relative overflow-hidden bg-white p-6 rounded-2xl shadow-sm border border-yellow-100 group hover:shadow-md transition-all"><div class="absolute top-0 right-0 w-24 h-24 bg-yellow-50 rounded-bl-full -mr-4 -mt-4 transition-transform group-hover:scale-110"></div><div class="relative z-10 flex flex-col h-full justify-between"><div class="w-12 h-12 bg-yellow-100 text-yellow-600 rounded-xl flex items-center justify-center text-xl mb-4 shadow-sm"><i class="fas fa-procedures"></i></div><div><p class="text-xs font-bold text-gray-400 uppercase tracking-wider">Sakit</p><h3 id="statGuruSakit" class="text-3xl font-bold text-gray-800 mt-1">-</h3></div></div></div><div class="relative overflow-hidden bg-white p-6 rounded-2xl shadow-sm border border-blue-100 group hover:shadow-md transition-all"><div class="absolute top-0 right-0 w-24 h-24 bg-blue-50 rounded-bl-full -mr-4 -mt-4 transition-transform group-hover:scale-110"></div><div class="relative z-10 flex flex-col h-full justify-between"><div class="w-12 h-12 bg-blue-100 text-blue-600 rounded-xl flex items-center justify-center text-xl mb-4 shadow-sm"><i class="fas fa-envelope-open-text"></i></div><div><p class="text-xs font-bold text-gray-400 uppercase tracking-wider">Izin</p><h3 id="statGuruIzin" class="text-3xl font-bold text-gray-800 mt-1">-</h3></div></div></div><div class="relative overflow-hidden bg-white p-6 rounded-2xl shadow-sm border border-red-100 group hover:shadow-md transition-all"><div class="absolute top-0 right-0 w-24 h-24 bg-red-50 rounded-bl-full -mr-4 -mt-4 transition-transform group-hover:scale-110"></div><div class="relative z-10 flex flex-col h-full justify-between"><div class="w-12 h-12 bg-red-100 text-red-600 rounded-xl flex items-center justify-center text-xl mb-4 shadow-sm"><i class="fas fa-times-circle"></i></div><div><p class="text-xs font-bold text-gray-400 uppercase tracking-wider">Alpa</p><h3 id="statGuruAlpa" class="text-3xl font-bold text-gray-800 mt-1">-</h3></div></div></div></div><div class="grid grid-cols-1 lg:grid-cols-3 gap-6"><div class="lg:col-span-2 bg-white rounded-2xl p-6 border border-gray-100 shadow-sm"><h3 class="text-sm font-bold text-gray-700 mb-6 flex items-center justify-between"><span><i class="fas fa-chart-bar text-indigo-500 mr-2"></i> Statistik Kehadiran Hari Ini</span><span class="text-[10px] bg-gray-100 text-gray-500 px-2 py-1 rounded">Realtime</span></h3><div class="relative w-full h-[300px]"><canvas id="guruAttendanceChart"></canvas></div></div><div class="bg-gradient-to-br from-indigo-600 to-purple-700 rounded-2xl p-6 text-white shadow-xl shadow-indigo-200 relative overflow-hidden flex flex-col justify-center items-center text-center"><div class="absolute top-0 left-0 w-full h-full bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10"></div><div class="relative z-10"><div class="w-16 h-16 bg-white/20 backdrop-blur-md rounded-full flex items-center justify-center text-2xl mb-4 mx-auto border border-white/20"><i class="fas fa-qrcode"></i></div><h3 class="text-lg font-bold mb-2">Mulai Absensi</h3><p class="text-indigo-100 text-xs mb-6 px-4">Buka pemindai kamera untuk melakukan absensi siswa secara cepat.</p><button onclick="loadScanAbsensi()" class="bg-white text-indigo-700 px-6 py-3 rounded-xl font-bold text-sm shadow-lg hover:bg-gray-50 transition transform active:scale-95 w-full">Buka Scanner</button></div></div></div></div>`;
-    showView('view-guru-dashboard', content);
-    try {
-        const kelasFilter = currentUser.role === 'guru' ? currentUser.kelas : null, params = kelasFilter ? `?kelas=${encodeURIComponent(kelasFilter)}` : '';
-        const result = await apiRequest(`/monitoring/realtime${params}`);
-        if (result.success) {
-            const data = result.data, total = data.length, sakit = data.filter(d => d.status === 'Sakit').length, izin = data.filter(d => d.status === 'Izin').length, alpa = data.filter(d => d.status === 'Alpa').length, hadir = data.filter(d => d.status === 'Hadir').length, belum = data.filter(d => d.status === 'Belum Absen').length;
-            animateValue("statGuruTotal", 0, total, 1000); animateValue("statGuruSakit", 0, sakit, 1000); animateValue("statGuruIzin", 0, izin, 1000); animateValue("statGuruAlpa", 0, alpa, 1000);
-            const ctx = document.getElementById('guruAttendanceChart');
-            if (ctx && typeof Chart !== 'undefined') { if (guruChartInstance) guruChartInstance.destroy(); guruChartInstance = new Chart(ctx, { type: 'bar', data: { labels: ['Hadir', 'Sakit', 'Izin', 'Alpa'], datasets: [{ label: 'Jumlah Siswa', data: [hadir, sakit, izin, alpa], backgroundColor: ['#10B981', '#F59E0B', '#3B82F6', '#EF4444'], borderRadius: 6 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } } }); }
-        }
-    } catch (error) { console.error(error); }
+  document.getElementById('pageTitle').innerHTML = 'Dashboard Guru';
+  showLoading();
+  try {
+    const params = currentUser.kelas ? `?kelas=${currentUser.kelas}` : '';
+    const res = await apiCall(`/monitoring/realtime${params}`);
+    hideLoading();
+    if (res.success) {
+      const data = res.data, total = data.length, hadir = data.filter(d=>d.status==='Hadir').length, sakit = data.filter(d=>d.status==='Sakit').length, izin = data.filter(d=>d.status==='Izin').length, alpa = total-hadir-sakit-izin;
+      document.getElementById('mainContentArea').innerHTML = `
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-4">
+          <div class="bg-white p-3 rounded-xl shadow-sm text-center border-l-4 border-indigo-500"><p class="text-gray-400 text-[10px]">Total</p><p class="text-xl font-bold">${total}</p></div>
+          <div class="bg-white p-3 rounded-xl shadow-sm text-center border-l-4 border-green-500"><p class="text-gray-400 text-[10px]">Hadir</p><p class="text-xl font-bold text-green-600">${hadir}</p></div>
+          <div class="bg-white p-3 rounded-xl shadow-sm text-center border-l-4 border-yellow-500"><p class="text-gray-400 text-[10px]">Sakit</p><p class="text-xl font-bold text-yellow-600">${sakit}</p></div>
+          <div class="bg-white p-3 rounded-xl shadow-sm text-center border-l-4 border-blue-500"><p class="text-gray-400 text-[10px]">Izin</p><p class="text-xl font-bold text-blue-600">${izin}</p></div>
+        </div>
+        <div class="bg-white rounded-xl p-3 shadow-sm mb-4"><canvas id="guruChart" height="200"></canvas></div>
+        <button onclick="loadMonitoring()" class="w-full bg-indigo-600 text-white py-2 rounded-xl text-sm font-semibold"><i class="fas fa-eye mr-2"></i> Lihat Monitoring</button>
+      `;
+      const ctx = document.getElementById('guruChart').getContext('2d');
+      if (guruChart) guruChart.destroy();
+      guruChart = new Chart(ctx, { type:'bar', data:{ labels:['Hadir','Sakit','Izin','Alpa'], datasets:[{ label:'Jumlah', data:[hadir,sakit,izin,alpa], backgroundColor:['#10B981','#F59E0B','#3B82F6','#EF4444'], borderRadius:6 }] }, options:{ responsive:true, maintainAspectRatio:true, plugins:{ legend:{ display:false } }, scales:{ y:{ beginAtZero:true, ticks:{ stepSize:1 } } } } });
+    }
+  } catch(e) { hideLoading(); showAlert('error', 'Gagal load data'); }
 }
 
 // ==========================================================================
-// SISWA DASHBOARD
+// SISWA DASHBOARD (DENGAN FORM IZIN/SAKIT)
 // ==========================================================================
 async function loadSiswaDashboard() {
-    stopAndBack(false);
-    setActiveMenu('Dashboard');
-    const content = `<div id="view-siswa-dashboard" class="view-section active animate-fade-in h-full"><div class="flex justify-end mb-4"><button onclick="refreshData('dashboard')" class="flex items-center space-x-2 text-xs font-bold text-indigo-600 bg-white border border-indigo-100 px-3 py-1.5 rounded-lg shadow-sm hover:bg-indigo-50 transition"><i class="fas fa-sync-alt"></i> <span>Refresh</span></button></div><div class="grid grid-cols-1 lg:grid-cols-3 gap-6 max-w-7xl mx-auto"><div class="lg:col-span-2 space-y-6"><div id="heroCard" class="relative overflow-hidden rounded-3xl bg-slate-800 p-6 text-white shadow-xl shadow-slate-200 transition-all duration-500 group"><div class="absolute top-0 right-0 -mr-16 -mt-16 w-64 h-64 bg-white opacity-5 rounded-full blur-3xl transition-transform duration-700 group-hover:scale-110"></div><div class="relative z-10"><div class="flex justify-between items-start mb-6"><div><p id="dashDate" class="text-slate-300 text-[10px] font-bold tracking-widest uppercase mb-1">${new Date().toLocaleDateString('id-ID', dateOptions)}</p><h2 class="text-3xl font-bold tracking-tight mb-1">Hai, <span id="dashGreeting">${currentUser.nama?.split(' ')[0] || 'Siswa'}</span></h2><p class="text-slate-400 text-xs">Semoga harimu menyenangkan!</p></div><div id="dashStatusBadge" class="px-4 py-2 rounded-xl bg-white/10 backdrop-blur-md border border-white/10 text-white text-xs font-bold shadow-sm">Memuat...</div></div><div class="grid grid-cols-2 gap-4 mt-4"><div class="bg-white/5 backdrop-blur-sm rounded-2xl p-4 border border-white/10"><div class="flex items-center gap-2 mb-2 text-slate-300"><i class="fas fa-sign-in-alt text-xs"></i><span class="text-[10px] uppercase font-bold tracking-wider">Jam Datang</span></div><div id="valMasuk" class="font-mono text-2xl font-bold tracking-tight">--:--</div></div><div class="bg-white/5 backdrop-blur-sm rounded-2xl p-4 border border-white/10"><div class="flex items-center gap-2 mb-2 text-slate-300"><i class="fas fa-sign-out-alt text-xs"></i><span class="text-[10px] uppercase font-bold tracking-wider">Jam Pulang</span></div><div id="valPulang" class="font-mono text-2xl font-bold tracking-tight">--:--</div></div></div></div></div><div id="alertBelumAbsen" class="hidden bg-rose-50 border border-rose-100 rounded-xl p-4 flex gap-3 items-start shadow-sm"><div class="bg-white p-2 rounded-full text-rose-500 shadow-sm"><i class="fas fa-exclamation"></i></div><div><h4 class="text-sm font-bold text-rose-800 mb-0.5">Peringatan Absensi</h4><p class="text-xs font-medium text-rose-600/80 leading-relaxed">Anda belum melakukan scan absensi datang hari ini.</p></div></div></div><div class="space-y-6"><div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-6 text-center relative overflow-hidden"><div class="absolute top-0 left-0 w-full h-16 bg-gradient-to-r from-indigo-500 to-purple-500"></div><div class="relative z-10 -mt-2"><div class="w-20 h-20 bg-white p-1 rounded-full mx-auto shadow-md"><div class="w-full h-full bg-slate-100 rounded-full flex items-center justify-center text-3xl text-slate-300"><i class="fas fa-user"></i></div></div><h3 id="profileNameSidebar" class="font-bold text-slate-800 text-lg mt-3 truncate">${currentUser.nama || 'Siswa'}</h3><p id="profileNisnSidebar" class="text-xs font-mono text-slate-500 bg-slate-100 inline-block px-2 py-1 rounded mt-1">${currentUser.nisn || '-'}</p><div class="grid grid-cols-2 gap-2 mt-4 text-left"><div class="bg-slate-50 p-2 rounded-lg border border-slate-100"><p class="text-[10px] text-slate-400 uppercase font-bold">Kelas</p><p id="profileKelasSidebar" class="text-sm font-bold text-slate-700">${currentUser.kelas || '-'}</p></div><div class="bg-slate-50 p-2 rounded-lg border border-slate-100"><p class="text-[10px] text-slate-400 uppercase font-bold">Status</p><p class="text-sm font-bold text-emerald-600">Aktif</p></div></div></div></div><button onclick="loadQRCodeSiswa()" class="w-full group relative overflow-hidden rounded-2xl bg-slate-900 p-1 shadow-lg shadow-slate-900/10 transition-all active:scale-[0.98]"><div class="relative bg-slate-900 rounded-[0.9rem] px-5 py-4 flex items-center justify-between transition-all group-hover:bg-slate-800"><div class="text-left"><h3 class="text-white font-bold text-sm">Kartu Digital</h3><p class="text-slate-400 text-[10px]">Tampilkan QR Code</p></div><div class="w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center text-white text-lg"><i class="fas fa-qrcode"></i></div></div></button></div></div></div>`;
-    showView('view-siswa-dashboard', content);
-    try {
-        const result = await apiRequest(`/absensi/today/${currentUser.nisn}`);
-        const absensi = result.data;
-        const elBadge = document.getElementById('dashStatusBadge'), elValMasuk = document.getElementById('valMasuk'), elValPulang = document.getElementById('valPulang'), elAlert = document.getElementById('alertBelumAbsen');
-        if (!absensi) {
-            if (elBadge) { elBadge.className = "px-4 py-2 rounded-xl bg-rose-500/20 backdrop-blur-md text-rose-200 text-xs font-bold animate-pulse"; elBadge.innerHTML = `<i class="fas fa-circle text-[8px] mr-2"></i> BELUM ABSEN`; }
-            if (elValMasuk) elValMasuk.textContent = "--:--";
-            if (elValPulang) elValPulang.textContent = "--:--";
-            if (elAlert) elAlert.classList.remove('hidden');
-        } else {
-            if (elAlert) elAlert.classList.add('hidden');
-            if (elValMasuk) elValMasuk.textContent = absensi.jamDatang || "--:--";
-            if (absensi.jamPulang) { if (elValPulang) elValPulang.textContent = absensi.jamPulang; if (elBadge) { elBadge.className = "px-4 py-2 rounded-xl bg-white/20 backdrop-blur-md text-white text-xs font-bold"; elBadge.innerHTML = `<i class="fas fa-check-circle mr-2"></i> SELESAI`; } }
-            else { if (elBadge) { elBadge.className = "px-4 py-2 rounded-xl bg-white/20 backdrop-blur-md text-white text-xs font-bold animate-pulse"; elBadge.innerHTML = `<i class="fas fa-clock mr-2"></i> SEDANG BERLANGSUNG`; } }
-        }
-    } catch (error) { console.error(error); }
+  document.getElementById('pageTitle').innerHTML = 'Dashboard Siswa';
+  showLoading();
+  try {
+    const absensi = await apiCall(`/absensi/today/${currentUser.nisn}`);
+    const izinList = await apiCall('/izin/my');
+    hideLoading();
+    const jamDatang = absensi.success && absensi.data ? (absensi.data.jamDatang || '--:--') : '--:--';
+    const jamPulang = absensi.success && absensi.data ? (absensi.data.jamPulang || '--:--') : '--:--';
+    const statusClass = { pending:'bg-yellow-100 text-yellow-700', disetujui:'bg-green-100 text-green-700', ditolak:'bg-red-100 text-red-700' };
+    const statusText = { pending:'Menunggu', disetujui:'Disetujui', ditolak:'Ditolak' };
+    const riwayatHtml = izinList.success && izinList.data.length ? izinList.data.map(item => `
+      <div class="border rounded-lg p-2 mb-2"><div class="flex justify-between items-start"><span class="font-bold text-xs">${item.jenis === 'izin' ? '📋 Izin' : '🤒 Sakit'}</span><span class="px-1.5 py-0.5 rounded text-[9px] font-bold ${statusClass[item.status]}">${statusText[item.status]}</span></div><p class="text-[9px] text-gray-500 mt-0.5">${new Date(item.tanggalPengajuan).toLocaleDateString('id-ID')}</p><p class="text-[9px]">${item.tanggalMulai} - ${item.tanggalAkhir}</p><p class="text-[8px] text-gray-400">${item.keterangan || '-'}</p></div>
+    `).join('') : '<div class="text-center text-gray-400 py-4 text-xs">Belum ada pengajuan</div>';
+    document.getElementById('mainContentArea').innerHTML = `
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <div class="lg:col-span-2 space-y-4">
+          <div class="bg-gradient-to-r from-indigo-600 to-purple-600 rounded-xl p-4 text-white"><h2 class="text-lg font-bold mb-1">Halo, ${currentUser.nama}!</h2><p class="text-xs">Semangat belajar hari ini!</p></div>
+          <div class="bg-white rounded-xl p-4 shadow-sm"><h3 class="font-bold text-sm mb-3">Status Absensi Hari Ini</h3><div class="grid grid-cols-2 gap-3"><div class="text-center p-3 bg-gray-50 rounded-lg"><p class="text-gray-500 text-[10px]">Jam Datang</p><p class="text-xl font-bold text-indigo-600">${jamDatang}</p></div><div class="text-center p-3 bg-gray-50 rounded-lg"><p class="text-gray-500 text-[10px]">Jam Pulang</p><p class="text-xl font-bold text-indigo-600">${jamPulang}</p></div></div></div>
+          <div class="bg-white rounded-xl p-4 shadow-sm"><h3 class="font-bold text-sm mb-3"><i class="fas fa-file-medical text-indigo-600 mr-1"></i> Ajukan Izin / Sakit</h3>
+            <form id="formIzin" class="space-y-3"><div><select id="jenisIzin" class="w-full border rounded-lg p-2 text-sm"><option value="izin">Izin</option><option value="sakit">Sakit</option></select></div><div class="flex gap-2"><input type="date" id="tglMulai" class="flex-1 border rounded-lg p-2 text-sm"><input type="date" id="tglAkhir" class="flex-1 border rounded-lg p-2 text-sm"></div><textarea id="ketIzin" rows="2" class="w-full border rounded-lg p-2 text-sm" placeholder="Keterangan"></textarea><button type="submit" class="w-full bg-indigo-600 text-white py-2 rounded-lg text-sm font-semibold"><i class="fas fa-paper-plane mr-1"></i> Ajukan</button></form>
+          </div>
+        </div>
+        <div class="space-y-4">
+          <div class="bg-white rounded-xl p-4 text-center"><div class="w-16 h-16 bg-indigo-100 rounded-full flex items-center justify-center mx-auto mb-2"><i class="fas fa-user-graduate text-2xl text-indigo-600"></i></div><h3 class="font-bold text-sm">${currentUser.nama}</h3><p class="text-gray-500 text-[10px]">NISN: ${currentUser.nisn}</p><p class="text-gray-500 text-[10px]">Kelas: ${currentUser.kelas}</p></div>
+          <button onclick="loadQRCodeSiswa()" class="w-full bg-indigo-600 text-white py-2 rounded-xl text-sm font-semibold"><i class="fas fa-qrcode mr-1"></i> Kartu Digital</button>
+          <div class="bg-white rounded-xl p-4 shadow-sm"><h3 class="font-bold text-sm mb-2"><i class="fas fa-history text-indigo-600 mr-1"></i> Riwayat Pengajuan</h3><div id="riwayatIzin" class="max-h-64 overflow-y-auto">${riwayatHtml}</div></div>
+        </div>
+      </div>
+    `;
+    document.getElementById('formIzin').addEventListener('submit', async (e) => { e.preventDefault(); await submitIzin(); });
+  } catch(e) { hideLoading(); showAlert('error', 'Gagal load data'); }
+}
+async function submitIzin() {
+  const jenis = document.getElementById('jenisIzin').value, tglMulai = document.getElementById('tglMulai').value, tglAkhir = document.getElementById('tglAkhir').value, keterangan = document.getElementById('ketIzin').value;
+  if (!tglMulai || !tglAkhir) { showAlert('warning', 'Pilih tanggal mulai dan akhir'); return; }
+  showLoading();
+  try {
+    const res = await apiCall('/izin/create', 'POST', { jenis, keterangan, tanggalMulai: tglMulai, tanggalAkhir: tglAkhir });
+    if (res.success) { showAlert('success', res.message); document.getElementById('tglMulai').value = ''; document.getElementById('tglAkhir').value = ''; document.getElementById('ketIzin').value = ''; loadSiswaDashboard(); }
+    else showAlert('error', res.message);
+  } catch(e) { showAlert('error', 'Gagal mengajukan'); }
+  hideLoading();
 }
 
 // ==========================================================================
-// DATA SISWA
+// DATA SISWA & GURU
 // ==========================================================================
 async function loadDataSiswa() {
-    stopAndBack(false);
-    setActiveMenu('Data Siswa');
-    const content = `<div id="view-data-siswa" class="view-section active animate-fade-in"><div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden"><div class="p-4 border-b border-gray-100 flex justify-between items-center bg-gray-50/30"><div><h3 class="font-bold text-sm text-gray-800">Direktori Siswa</h3></div><div class="flex items-center gap-2"><button onclick="refreshData('siswa')" class="bg-white text-gray-600 border border-gray-200 px-3 py-1.5 rounded-lg text-xs font-bold shadow-sm hover:bg-gray-50 hover:text-indigo-600 transition" title="Perbarui Data"><i class="fas fa-sync-alt"></i></button><button onclick="showAddSiswaModal()" class="bg-indigo-600 text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow-sm hover:bg-indigo-700 transition"><i class="fas fa-plus mr-1"></i> Tambah</button></div></div><div class="p-4 bg-white border-b border-gray-100 flex flex-col md:flex-row justify-between items-center gap-4"><div class="flex flex-col sm:flex-row items-center gap-3 text-xs w-full md:w-auto"><div class="flex items-center gap-2 w-full sm:w-auto"><span class="text-gray-500 font-bold whitespace-nowrap">Show</span><select onchange="handleTableLimit('siswa', this.value)" class="bg-gray-50 border border-gray-200 text-gray-700 text-xs rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block p-2 w-full sm:w-auto"><option value="10">10</option><option value="25">25</option><option value="50">50</option><option value="100">100</option><option value="all">Semua</option></select></div><select id="filterKelasSiswa" onchange="handleTableClassFilter('siswa', this.value)" class="bg-gray-50 border border-gray-200 text-gray-700 text-xs rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block p-2 w-full sm:w-40 font-bold shadow-sm"><option value="">Semua Kelas</option></select></div><div class="relative w-full md:w-64"><div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none"><i class="fas fa-search text-gray-400 text-xs"></i></div><input type="text" oninput="handleTableSearch('siswa', this.value)" class="bg-gray-50 border border-gray-200 text-gray-900 text-xs rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block w-full pl-10 p-2 transition-all" placeholder="Cari Nama / NISN..."></div></div><div class="overflow-x-auto"><table class="w-full text-left"><thead class="bg-gray-50 text-gray-500 text-[10px] uppercase font-semibold"><tr><th class="p-3 text-center w-10">No</th><th class="p-3">Nama</th><th class="p-3">NISN</th><th class="p-3">Kelas</th><th class="p-3 text-center">Aksi</th></tr></thead><tbody id="tbody-siswa" class="divide-y divide-gray-50 bg-white text-xs"></tbody></table></div><div id="footer-siswa" class="p-4 border-t border-gray-100 bg-gray-50/30 flex justify-between items-center text-xs text-gray-500"><span id="info-siswa">Menampilkan 0数据</span><div class="flex gap-1"><button onclick="changePage('siswa', -1)" class="px-3 py-1 bg-white border border-gray-200 rounded hover:bg-gray-100 disabled:opacity-50 transition" id="btn-prev-siswa">Prev</button><button onclick="changePage('siswa', 1)" class="px-3 py-1 bg-white border border-gray-200 rounded hover:bg-gray-100 disabled:opacity-50 transition" id="btn-next-siswa">Next</button></div></div></div></div>`;
-    showView('view-data-siswa', content);
-    if (tableState.siswa.fullData.length > 0) processTableData('siswa');
-    else { try { const result = await apiRequest('/siswa'); if (result.success) { tableState.siswa.fullData = result.data; processTableData('siswa'); } } catch (error) { showAlert('error', 'Gagal memuat数据'); } }
+  document.getElementById('pageTitle').innerHTML = 'Data Siswa';
+  showLoading();
+  try { const res = await apiCall('/siswa'); hideLoading(); if(res.success){ document.getElementById('mainContentArea').innerHTML = `<div class="bg-white rounded-xl overflow-hidden"><div class="p-3 border-b bg-gray-50"><h3 class="font-bold text-sm">📋 Data Siswa</h3></div><div class="overflow-x-auto"><table class="w-full text-sm"><thead class="bg-gray-50 text-gray-500 text-[10px]"><tr><th class="p-2">No</th><th>Nama</th><th>NISN</th><th>Kelas</th></tr></thead><tbody>${res.data.map((s,i)=>`<tr class="border-b"><td class="p-2 text-center">${i+1}<\/td><td class="p-2 font-medium">${s.nama}<\/td><td class="p-2">${s.nisn}<\/td><td class="p-2"><span class="bg-blue-100 px-1.5 py-0.5 rounded text-[9px]">${s.kelas}<\/span><\/td><\/tr>`).join('')}</tbody></table></div></div>`; } }
+  catch(e){ hideLoading(); showAlert('error','Gagal load data'); }
 }
-function renderSiswaRows(data, startIdx) {
-    const tbody = document.getElementById('tbody-siswa');
-    if (!tbody) return;
-    if (data.length === 0) { tbody.innerHTML = '<tr><td colspan="5" class="p-8 text-center text-gray-400">Data tidak ditemukan.点</td><tr>'; return; }
-    tbody.innerHTML = data.map((siswa, i) => `<tr class="border-b hover:bg-gray-50"><td class="p-3 text-center">${startIdx + i + 1}</td><td class="p-3"><div class="flex items-center"><div class="w-6 h-6 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center text-xs mr-2">${siswa.nama.charAt(0)}</div>${siswa.nama}</div></td><td class="p-3">${siswa.nisn}</td><td class="p-3"><span class="bg-blue-50 text-blue-700 px-2 py-1 rounded text-xs">${siswa.kelas}</span></td><td class="p-3 text-center"><div class="flex justify-center gap-1"><button onclick="viewSiswa(${JSON.stringify(siswa)})" class="p-1.5 bg-emerald-50 text-emerald-600 rounded"><i class="fas fa-eye text-xs"></i></button><button onclick="editSiswa(${JSON.stringify(siswa)})" class="p-1.5 bg-amber-50 text-amber-600 rounded"><i class="fas fa-edit text-xs"></i></button><button onclick="deleteSiswaConfirm('${siswa.nisn}', '${siswa.nama}')" class="p-1.5 bg-red-50 text-red-600 rounded"><i class="fas fa-trash text-xs"></i></button><button onclick="generateQRForSiswa('${siswa.nisn}', '${siswa.nama}', '${siswa.kelas}')" class="p-1.5 bg-blue-50 text-blue-600 rounded"><i class="fas fa-qrcode text-xs"></i></button></div></td></tr>`).join('');
-}
-async function showAddSiswaModal() { showAlert('info', 'Fitur tambah siswa sedang dalam pengembangan'); }
-async function editSiswa(s) { showAlert('info', 'Fitur edit siswa sedang dalam pengembangan'); }
-async function viewSiswa(s) { showAlert('info', 'Fitur detail siswa sedang dalam pengembangan'); }
-async function deleteSiswaConfirm(nisn, nama) { showAlert('warning', 'Fitur hapus siswa sedang dalam pengembangan'); }
-function generateQRForSiswa(nisn, nama, kelas) { loadQRCodeSiswa(); }
-
-// ==========================================================================
-// DATA GURU
-// ==========================================================================
 async function loadDataGuru() {
-    if (currentUser.role !== 'admin') { showAlert('error', 'Akses ditolak. Hanya admin.'); return; }
-    stopAndBack(false);
-    setActiveMenu('Data Guru');
-    const content = `<div id="view-data-guru" class="view-section active animate-fade-in"><div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden"><div class="p-4 border-b border-gray-100 flex justify-between items-center bg-gray-50/30"><div><h3 class="font-bold text-sm text-gray-800">Manajemen Guru</h3></div><div class="flex items-center gap-2"><button onclick="refreshData('guru')" class="bg-white text-gray-600 border border-gray-200 px-3 py-1.5 rounded-lg text-xs font-bold shadow-sm hover:bg-gray-50 hover:text-purple-600 transition" title="Perbarui Data"><i class="fas fa-sync-alt"></i></button><button onclick="showAddGuruModal()" class="bg-purple-600 text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow-sm hover:bg-purple-700 transition"><i class="fas fa-plus mr-1"></i> Tambah</button></div></div><div class="p-4 bg-white border-b border-gray-100 flex flex-col md:flex-row justify-between items-center gap-4"><div class="flex flex-col sm:flex-row items-center gap-3 text-xs w-full md:w-auto"><div class="flex items-center gap-2"><span class="text-gray-500 font-bold">Show</span><select onchange="handleTableLimit('guru', this.value)" class="bg-gray-50 border border-gray-200 text-gray-700 text-xs rounded-lg focus:ring-purple-500 focus:border-purple-500 block p-2"><option value="10">10</option><option value="25">25</option><option value="50">50</option><option value="all">Semua</option></select></div><select id="filterKelasGuru" onchange="handleTableClassFilter('guru', this.value)" class="bg-gray-50 border border-gray-200 text-gray-700 text-xs rounded-lg focus:ring-purple-500 focus:border-purple-500 block p-2 w-full sm:w-40 font-bold shadow-sm"><option value="">Semua Kelas</option></select></div><div class="relative w-full md:w-64"><div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none"><i class="fas fa-search text-gray-400 text-xs"></i></div><input type="text" oninput="handleTableSearch('guru', this.value)" class="bg-gray-50 border border-gray-200 text-gray-900 text-xs rounded-lg focus:ring-purple-500 focus:border-purple-500 block w-full pl-10 p-2" placeholder="Cari Username..."></div></div><div class="overflow-x-auto"><table class="w-full text-left"><thead class="bg-gray-50 text-gray-500 text-[10px] uppercase font-semibold"><tr><th class="p-3 text-center w-10">No</th><th class="p-3">Username</th><th class="p-3">Wali Kelas</th><th class="p-3 text-center">Aksi</th></tr></thead><tbody id="tbody-guru" class="divide-y divide-gray-50 bg-white text-xs"></tbody></table></div><div id="footer-guru" class="p-4 border-t border-gray-100 bg-gray-50/30 flex justify-between items-center text-xs text-gray-500"><span id="info-guru">Menampilkan 0数据</span><div class="flex gap-1"><button onclick="changePage('guru', -1)" class="px-3 py-1 bg-white border border-gray-200 rounded hover:bg-gray-100 disabled:opacity-50 transition" id="btn-prev-guru">Prev</button><button onclick="changePage('guru', 1)" class="px-3 py-1 bg-white border border-gray-200 rounded hover:bg-gray-100 disabled:opacity-50 transition" id="btn-next-guru">Next</button></div></div></div></div>`;
-    showView('view-data-guru', content);
-    if (tableState.guru.fullData.length > 0) processTableData('guru');
-    else { try { const result = await apiRequest('/guru'); if (result.success) { tableState.guru.fullData = result.data; processTableData('guru'); } } catch (error) { showAlert('error', 'Gagal memuat数据'); } }
+  if(currentUser.role!=='admin'){ showAlert('error','Akses ditolak'); return; }
+  document.getElementById('pageTitle').innerHTML = 'Data Guru';
+  showLoading();
+  try { const res = await apiCall('/guru'); hideLoading(); if(res.success){ document.getElementById('mainContentArea').innerHTML = `<div class="bg-white rounded-xl overflow-hidden"><div class="p-3 border-b bg-gray-50"><h3 class="font-bold text-sm">👨‍🏫 Data Guru</h3></div><div class="overflow-x-auto"><table class="w-full text-sm"><thead class="bg-gray-50 text-gray-500 text-[10px]"><tr><th class="p-2">No</th><th>Username</th><th>Kelas</th></tr></thead><tbody>${res.data.map((g,i)=>`<tr class="border-b"><td class="p-2 text-center">${i+1}<\/td><td class="p-2">${g.username}<\/td><td class="p-2">${g.kelas || '-'}<\/td><\/tr>`).join('')}</tbody></table></div></div>`; } }
+  catch(e){ hideLoading(); showAlert('error','Gagal load data'); }
 }
-function renderGuruRows(data, startIdx) {
-    const tbody = document.getElementById('tbody-guru');
-    if (!tbody) return;
-    if (data.length === 0) { tbody.innerHTML = '<tr><td colspan="4" class="p-8 text-center text-gray-400">Data tidak ditemukan.点</td></tr>'; return; }
-    tbody.innerHTML = data.map((guru, i) => `<tr class="border-b hover:bg-gray-50"><td class="p-3 text-center">${startIdx + i + 1}</td><td class="p-3 font-medium">${guru.username}</td><td class="p-3">${guru.kelas || '<span class="text-gray-400 italic">Semua Akses</span>'}</td><td class="p-3 text-center"><button onclick="editGuru(${JSON.stringify(guru)})" class="p-1.5 bg-amber-50 text-amber-600 rounded"><i class="fas fa-edit text-xs"></i></button><button onclick="deleteGuruConfirm('${guru.username}')" class="p-1.5 bg-red-50 text-red-600 rounded"><i class="fas fa-trash text-xs"></i></button></div></td></tr>`).join('');
-}
-async function showAddGuruModal() { showAlert('info', 'Fitur tambah guru sedang dalam pengembangan'); }
-async function editGuru(g) { showAlert('info', 'Fitur edit guru sedang dalam pengembangan'); }
-async function deleteGuruConfirm(u) { showAlert('warning', 'Fitur hapus guru sedang dalam pengembangan'); }
 
 // ==========================================================================
-// REKAP ABSENSI
+// KELOLA HARI LIBUR (ADMIN)
 // ==========================================================================
-async function loadRekapAbsensi() { stopAndBack(false); setActiveMenu('Laporan'); showView('view-rekap-absensi'); document.getElementById('mainContentArea').innerHTML = '<div class="bg-white rounded-xl p-6 text-center"><i class="fas fa-chart-line text-4xl text-indigo-600 mb-3 block"></i><h3 class="font-bold text-lg">Fitur Rekap Absensi</h3><p class="text-gray-500 text-sm mt-2">Sedang dalam pengembangan</p></div>'; }
-async function loadKelolaAbsen() { stopAndBack(false); setActiveMenu('Kelola Absen'); showView('view-kelola-absen'); document.getElementById('mainContentArea').innerHTML = '<div class="bg-white rounded-xl p-6 text-center"><i class="fas fa-calendar-alt text-4xl text-indigo-600 mb-3 block"></i><h3 class="font-bold text-lg">Fitur Kelola Absen</h3><p class="text-gray-500 text-sm mt-2">Sedang dalam pengembangan</p></div>'; }
-async function loadMonitoringAbsensi() { stopAndBack(false); setActiveMenu('Monitoring'); showView('view-monitoring'); document.getElementById('mainContentArea').innerHTML = '<div class="bg-white rounded-xl p-6 text-center"><i class="fas fa-eye text-4xl text-indigo-600 mb-3 block"></i><h3 class="font-bold text-lg">Fitur Monitoring</h3><p class="text-gray-500 text-sm mt-2">Sedang dalam pengembangan</p></div>'; }
+async function loadKelolaLibur() {
+  if(currentUser.role!=='admin'){ showAlert('error','Akses ditolak'); return; }
+  document.getElementById('pageTitle').innerHTML = 'Hari Libur';
+  showLoading();
+  try {
+    const res = await apiCall('/libur');
+    hideLoading();
+    const liburList = res.success ? res.data : [];
+    document.getElementById('mainContentArea').innerHTML = `
+      <div class="bg-white rounded-xl p-4 shadow-sm">
+        <h3 class="font-bold text-sm mb-3">📅 Daftar Hari Libur</h3>
+        <div class="flex flex-col sm:flex-row gap-2 mb-4"><input type="date" id="liburTgl" class="flex-1 border rounded-lg p-2 text-sm"><input type="text" id="liburKet" class="flex-1 border rounded-lg p-2 text-sm" placeholder="Keterangan"><button onclick="tambahLibur()" class="bg-emerald-600 text-white px-4 py-2 rounded-lg text-sm"><i class="fas fa-plus mr-1"></i> Tambah</button></div>
+        <div id="liburList" class="space-y-2">${liburList.map((item,i)=>`<div class="flex justify-between items-center bg-gray-50 p-2 rounded-lg"><div><span class="font-mono text-sm">${item.tanggal}</span> - <span class="text-sm">${item.keterangan || '-'}</span></div><button onclick="hapusLibur('${item.tanggal}')" class="text-red-500"><i class="fas fa-trash"></i></button></div>`).join('')}</div>
+        ${liburList.length===0?'<div class="text-center text-gray-400 py-4 text-sm">Belum ada hari libur</div>':''}
+      </div>
+    `;
+  } catch(e){ hideLoading(); showAlert('error','Gagal load data'); }
+}
+async function tambahLibur() {
+  const tanggal = document.getElementById('liburTgl').value, keterangan = document.getElementById('liburKet').value;
+  if(!tanggal){ showAlert('warning','Pilih tanggal'); return; }
+  showLoading();
+  try { const res = await apiCall('/libur','POST',{ tanggal, keterangan }); if(res.success){ showAlert('success',res.message); loadKelolaLibur(); } else showAlert('error',res.message); }
+  catch(e){ showAlert('error','Gagal tambah libur'); }
+  hideLoading();
+}
+async function hapusLibur(tanggal) {
+  const result = await Swal.fire({ title:'Hapus Libur?', text:`Hapus libur ${tanggal}?`, icon:'warning', showCancelButton:true, confirmButtonColor:'#EF4444', confirmButtonText:'Ya, Hapus!' });
+  if(result.isConfirmed){
+    showLoading();
+    try { const res = await apiCall(`/libur/${tanggal}`,'DELETE'); if(res.success){ showAlert('success',res.message); loadKelolaLibur(); } else showAlert('error',res.message); }
+    catch(e){ showAlert('error','Gagal hapus libur'); }
+    hideLoading();
+  }
+}
 
 // ==========================================================================
-// SCAN ABSENSI
+// MONITORING & SCAN
 // ==========================================================================
+async function loadMonitoring() {
+  document.getElementById('pageTitle').innerHTML = 'Monitoring';
+  showLoading();
+  try {
+    const params = currentUser.role==='guru'&&currentUser.kelas ? `?kelas=${currentUser.kelas}` : '';
+    const res = await apiCall(`/monitoring/realtime${params}`);
+    hideLoading();
+    if(res.success){
+      document.getElementById('mainContentArea').innerHTML = `
+        <div class="bg-white rounded-xl overflow-hidden"><div class="p-3 border-b bg-gray-50"><h3 class="font-bold text-sm">📊 Monitoring Kehadiran</h3><p class="text-[10px] text-gray-500">${new Date().toLocaleDateString('id-ID')}</p></div><div class="overflow-x-auto"><table class="w-full text-sm"><thead class="bg-gray-50 text-gray-500 text-[10px]"><tr><th class="p-2">No</th><th>Nama</th><th>Kelas</th><th>Jam Datang</th><th>Jam Pulang</th><th>Status</th></tr></thead><tbody>${res.data.map((d,i)=>`<tr class="border-b"><td class="p-2 text-center">${i+1}<\/td><td class="p-2 font-medium">${d.nama}<\/td><td class="p-2 text-center"><span class="bg-indigo-100 px-1.5 py-0.5 rounded text-[9px]">${d.kelas}<\/span><\/td><td class="p-2 text-center">${d.jamDatang||'-'}<\/td><td class="p-2 text-center">${d.jamPulang||'-'}<\/td><td class="p-2 text-center"><span class="px-1.5 py-0.5 rounded text-[9px] ${d.status==='Hadir'?'bg-green-100 text-green-700':d.status==='Izin'?'bg-blue-100 text-blue-700':'bg-gray-100'}">${d.status}<\/span><\/td><\/tr>`).join('')}</tbody></table></div><button onclick="if(currentUser.role==='guru')loadGuruDashboard(); else loadAdminDashboard();" class="m-3 bg-gray-600 text-white px-3 py-1.5 rounded-lg text-xs">Kembali</button></div>
+      `;
+    }
+  } catch(e){ hideLoading(); showAlert('error','Gagal load data'); }
+}
 async function loadScanAbsensi() {
-    stopAndBack(false);
-    setActiveMenu('Scan Absensi');
-    const content = `<div id="view-scanner" class="view-section active animate-fade-in"><div class="max-w-xs mx-auto"><div class="bg-white rounded-2xl shadow-xl border border-gray-200 overflow-hidden"><div class="p-4 bg-gray-900 text-white text-center"><h3 class="font-bold text-lg">Scanner</h3></div><div class="p-4"><div class="relative w-full aspect-square bg-black rounded-xl overflow-hidden mb-4"><div id="reader" class="w-full h-full"></div><div id="camLoading" class="absolute inset-0 flex flex-col items-center justify-center bg-gray-900 z-20"><i class="fas fa-circle-notch fa-spin text-2xl mb-2 text-indigo-500"></i><p class="text-xs font-medium text-white">Memuat...</p></div></div><div id="scanResult" class="hidden mb-4 text-center text-xs font-bold"></div><div class="flex gap-2 mb-2"><button onclick="startCamera('environment')" class="flex-1 bg-blue-50 text-blue-700 py-2 rounded-lg font-bold text-xs">Belakang</button><button onclick="startCamera('user')" class="flex-1 bg-purple-50 text-purple-700 py-2 rounded-lg font-bold text-xs">Depan</button></div><button onclick="stopAndBack(true)" class="w-full bg-gray-100 text-gray-600 py-2 rounded-lg font-bold text-xs">Kembali</button></div></div></div></div>`;
-    showView('view-scanner', content);
-    setTimeout(() => startCamera('environment'), 500);
+  document.getElementById('pageTitle').innerHTML = 'Scan QR';
+  document.getElementById('mainContentArea').innerHTML = `<div class="max-w-xs mx-auto"><div class="bg-white rounded-xl p-4"><div id="reader" class="w-full"></div><div id="scanResult" class="mt-3 text-center text-xs"></div><button onclick="stopScanner()" class="w-full mt-3 bg-gray-500 text-white py-2 rounded-lg text-sm">Kembali</button></div></div>`;
+  setTimeout(() => startScanner(), 500);
 }
-function startCamera(mode) { if (html5QrCode) html5QrCode.stop().then(() => initCamera(mode)).catch(() => initCamera(mode)); else initCamera(mode); }
-function initCamera(mode) { const loading = document.getElementById('camLoading'); if (loading) loading.classList.remove('hidden'); html5QrCode = new Html5Qrcode("reader"); html5QrCode.start({ facingMode: mode }, { fps: 10, qrbox: { width: 250, height: 250 } }, onScanSuccess, (err) => {}).then(() => { if (loading) loading.classList.add('hidden'); }).catch((err) => { if (loading) loading.classList.add('hidden'); showAlert('error', 'Gagal mengakses kamera'); }); }
-async function onScanSuccess(decodedText) { const resultDiv = document.getElementById('scanResult'); if (resultDiv) { resultDiv.classList.remove('hidden'); resultDiv.innerHTML = '<div class="bg-indigo-50 text-indigo-700 p-4 rounded-xl"><i class="fas fa-spinner fa-spin mr-2"></i> Memproses...</div>'; } try { const result = await apiRequest('/absensi/scan', 'POST', { nisn: decodedText, scannerRole: currentUser.role, scannerKelas: currentUser.kelas || '' }); if (result.success) { const color = result.type === 'datang' ? 'green' : 'blue'; if (resultDiv) resultDiv.innerHTML = `<div class="bg-${color}-50 text-${color}-900 p-4 rounded-xl"><h3 class="font-bold">${result.nama}</h3><p>${result.message}<br>Jam: ${result.jamDatang || result.jamPulang}</p></div>`; Swal.fire({ icon: 'success', title: result.type === 'datang' ? 'Absen Masuk' : 'Absen Pulang', text: `${result.message}\nJam: ${result.jamDatang || result.jamPulang}\nNama: ${result.nama}`, timer: 2000 }); if (currentUser.role === 'siswa') loadSiswaDashboard(); } else { if (resultDiv) resultDiv.innerHTML = `<div class="bg-red-50 text-red-700 p-4 rounded-xl">${result.message}</div>`; Swal.fire('Gagal', result.message, 'error'); } } catch (error) { if (resultDiv) resultDiv.innerHTML = '<div class="bg-red-50 text-red-700 p-4 rounded-xl">Gagal memproses</div>'; } }
-function stopAndBack(redirect) { if (html5QrCode) html5QrCode.stop().catch(() => {}); if (redirect && currentUser) { if (currentUser.role === 'admin') loadAdminDashboard(); else if (currentUser.role === 'guru') loadGuruDashboard(); else loadSiswaDashboard(); } }
+let qrScanner = null;
+function startScanner() {
+  if(qrScanner) qrScanner.stop().catch(()=>{});
+  qrScanner = new Html5Qrcode("reader");
+  qrScanner.start({ facingMode:"environment" }, { fps:10, qrbox:{ width:250, height:250 } }, async (text) => {
+    document.getElementById('scanResult').innerHTML = '<div class="bg-indigo-100 p-2 rounded text-xs"><i class="fas fa-spinner fa-spin mr-1"></i> Memproses...</div>';
+    const res = await apiCall('/absensi/scan','POST',{ nisn:text, scannerRole:currentUser.role, scannerKelas:currentUser.kelas||'' });
+    if(res.success) document.getElementById('scanResult').innerHTML = `<div class="bg-green-100 text-green-700 p-2 rounded text-xs">${res.message}<br>${res.nama} (${res.kelas})</div>`;
+    else document.getElementById('scanResult').innerHTML = `<div class="bg-red-100 text-red-700 p-2 rounded text-xs">${res.message}</div>`;
+    if(currentUser.role==='siswa') loadSiswaDashboard();
+  }, (err)=>{} );
+}
+function stopScanner() { if(qrScanner) qrScanner.stop().catch(()=>{}); loadDashboard(); }
+function loadDashboard() { if(currentUser.role==='admin') loadAdminDashboard(); else if(currentUser.role==='guru') loadGuruDashboard(); else loadSiswaDashboard(); }
 
 // ==========================================================================
 // KARTU SISWA
 // ==========================================================================
 function loadQRCodeSiswa() {
-    stopAndBack(false);
-    setActiveMenu('Kartu Saya');
-    const nisn = currentUser.nisn, nama = currentUser.nama, kelas = currentUser.kelas;
-    const content = `<div id="view-kartu-siswa" class="view-section active animate-fade-in"><div class="flex justify-center items-center h-full py-12"><div class="bg-white rounded-3xl shadow-2xl overflow-hidden w-full max-w-sm"><div class="bg-gradient-to-r from-indigo-600 to-purple-600 p-6 text-white text-center"><h2 class="text-2xl font-bold">KARTU PELAJAR</h2><p class="text-xs opacity-80 mt-1">Sistem Absensi Sekolah</p></div><div class="p-8 text-center"><div id="myQrcode" class="flex justify-center mb-4"></div><h3 class="text-2xl font-bold text-gray-800 mb-1">${nama}</h3><p class="text-indigo-600 font-mono text-lg mb-3">${nisn}</p><span class="inline-block px-4 py-1.5 bg-gray-200 text-gray-700 rounded-full text-sm font-bold">${kelas}</span></div><div class="p-5 bg-white border-t border-gray-100 flex gap-4"><button onclick="window.print()" class="flex-1 bg-gray-900 text-white py-3 rounded-xl font-bold text-sm"><i class="fas fa-print mr-2"></i> Cetak</button><button onclick="loadSiswaDashboard()" class="flex-1 border border-gray-300 text-gray-700 py-3 rounded-xl font-bold text-sm">Tutup</button></div></div></div></div>`;
-    showView('view-kartu-siswa', content);
-    setTimeout(() => { if (typeof QRCode !== 'undefined') new QRCode(document.getElementById("myQrcode"), { text: String(nisn), width: 160, height: 160, colorDark: "#1f2937", colorLight: "#ffffff", correctLevel: QRCode.CorrectLevel.H }); }, 100);
+  document.getElementById('pageTitle').innerHTML = 'Kartu Digital';
+  document.getElementById('mainContentArea').innerHTML = `<div class="flex justify-center"><div class="bg-white rounded-2xl shadow-xl w-full max-w-xs"><div class="bg-gradient-to-r from-indigo-600 to-purple-600 p-4 text-white text-center rounded-t-2xl"><h2 class="text-lg font-bold">KARTU PELAJAR</h2></div><div class="p-5 text-center"><div id="qrcode" class="flex justify-center mb-3"></div><h3 class="text-base font-bold">${currentUser.nama}</h3><p class="text-indigo-600 font-mono text-sm">${currentUser.nisn}</p><span class="inline-block bg-gray-200 px-2 py-0.5 rounded-full text-xs mt-1">${currentUser.kelas}</span></div><div class="p-3 flex gap-2"><button onclick="window.print()" class="flex-1 bg-gray-900 text-white py-2 rounded-lg text-xs"><i class="fas fa-print mr-1"></i> Cetak</button><button onclick="loadSiswaDashboard()" class="flex-1 border py-2 rounded-lg text-xs">Tutup</button></div></div></div>`;
+  setTimeout(() => { new QRCode(document.getElementById("qrcode"), { text: String(currentUser.nisn), width: 130, height: 130 }); }, 100);
 }
 
 // ==========================================================================
-// NOTIFICATION FUNCTIONS
+// NOTIFICATIONS
 // ==========================================================================
-function toggleNotificationPanel() { const panel = document.getElementById('notificationPanel'); if (panel.classList.contains('hidden')) { panel.classList.remove('hidden'); loadAdminNotifications(); } else { panel.classList.add('hidden'); } }
-async function loadAdminNotifications() { try { const result = await apiRequest('/notifications/admin'); if (result.success) renderAdminNotifications(result.data); } catch (error) { console.error('Load notifications error:', error); } }
-function renderAdminNotifications(notifications) { const container = document.getElementById('notificationList'); if (!container) return; if (notifications.length === 0) { container.innerHTML = '<div class="p-8 text-center text-gray-400"><i class="fas fa-bell-slash text-2xl mb-2 block"></i>Tidak ada notifikasi</div>'; return; } container.innerHTML = notifications.map(notif => `<div class="p-3 ${notif.status === 'unread' ? 'bg-indigo-50 border-l-4 border-indigo-500' : 'bg-white'}"><div class="flex justify-between"><div class="flex-1"><div class="flex items-center gap-2 mb-1">${getNotificationIcon(notif.type)}<span class="font-bold text-sm">${notif.title}</span>${notif.status === 'unread' ? '<span class="bg-indigo-500 text-white text-[9px] px-1.5 py-0.5 rounded-full">Baru</span>' : ''}</div><p class="text-xs text-gray-600">${notif.message}</p><p class="text-[10px] text-gray-400 mt-1">${formatNotificationTime(notif.tanggal)}</p>${notif.userId && notif.userRole ? `<p class="text-[9px] text-gray-400 mt-1">Dari: ${notif.userId} (${notif.userRole === 'siswa' ? 'Siswa' : notif.userRole})</p>` : ''}</div>${notif.status === 'unread' ? `<button onclick="markNotificationRead(${notif.id})" class="text-gray-400 hover:text-indigo-600 text-xs ml-2"><i class="fas fa-check-circle"></i></button>` : ''}</div></div>`).join(''); }
-function getNotificationIcon(type) { switch(type) { case 'success': return '<i class="fas fa-check-circle text-green-500 text-xs"></i>'; case 'error': return '<i class="fas fa-exclamation-circle text-red-500 text-xs"></i>'; case 'warning': return '<i class="fas fa-exclamation-triangle text-yellow-500 text-xs"></i>'; default: return '<i class="fas fa-info-circle text-blue-500 text-xs"></i>'; } }
-function formatNotificationTime(dateStr) { const date = new Date(dateStr), now = new Date(), diff = now - date, minutes = Math.floor(diff / 60000); if (minutes < 1) return 'Baru saja'; if (minutes < 60) return `${minutes} menit lalu`; if (minutes < 1440) return `${Math.floor(minutes / 60)} jam lalu`; return date.toLocaleDateString('id-ID'); }
-function updateUnreadCount(notifications) { const unread = notifications.filter(n => n.status === 'unread').length; const bellIcon = document.getElementById('notificationBell'); if (bellIcon) { let badge = bellIcon.querySelector('.notification-badge'); if (unread > 0) { if (!badge) { badge = document.createElement('span'); badge.className = 'notification-badge absolute
-  function updateUnreadCount(notifications) {
-    const unread = notifications.filter(n => n.status === 'unread').length;
-    const bellIcon = document.getElementById('notificationBell');
-    if (bellIcon) {
-        let badge = bellIcon.querySelector('.notification-badge');
-        if (unread > 0) {
-            if (!badge) {
-                badge = document.createElement('span');
-                badge.className = 'notification-badge absolute -top-1 -right-1 bg-red-500 text-white text-[9px] rounded-full w-4 h-4 flex items-center justify-center';
-                bellIcon.appendChild(badge);
-            }
-            badge.textContent = unread > 9 ? '9+' : unread;
-            badge.classList.remove('hidden');
-        } else if (badge) {
-            badge.classList.add('hidden');
-        }
+function toggleNotificationPanel() { const p = document.getElementById('notificationPanel'); p.classList.toggle('hidden'); if(!p.classList.contains('hidden')) loadAdminNotifications(); }
+async function loadAdminNotifications() {
+  try {
+    const res = await apiCall('/notifications/admin');
+    if(res.success){
+      const c = document.getElementById('notificationList');
+      if(res.data.length===0){ c.innerHTML = '<div class="p-3 text-center text-gray-500 text-xs">Tidak ada notifikasi</div>'; return; }
+      c.innerHTML = res.data.map(n => `<div class="p-2 ${n.status==='unread'?'bg-indigo-50':''} border-b"><div class="flex justify-between"><div><div class="flex items-center gap-1"><i class="fas ${n.type==='success'?'fa-check-circle text-green-500':'fa-info-circle text-blue-500'} text-[10px]"></i><span class="font-bold text-[10px]">${n.title}</span>${n.status==='unread'?'<span class="bg-indigo-500 text-white text-[7px] px-1 py-0.5 rounded-full ml-1">Baru</span>':''}</div><p class="text-[9px] text-gray-600 mt-0.5">${n.message}</p><p class="text-[8px] text-gray-400 mt-0.5">${formatTime(n.tanggal)}</p></div>${n.status==='unread'?`<button onclick="markRead(${n.id})" class="text-gray-400"><i class="fas fa-check-circle text-[10px]"></i></button>`:''}</div></div>`).join('');
+      const unread = res.data.filter(n=>n.status==='unread').length;
+      const badge = document.getElementById('notifBadge');
+      if(unread>0){ badge.textContent = unread>9?'9+':unread; badge.classList.remove('hidden'); } else badge.classList.add('hidden');
     }
+  } catch(e){}
 }
-async function markNotificationRead(notificationId) {
-    try {
-        const result = await apiRequest(`/notifications/${notificationId}/read`, 'PUT');
-        if (result.success) loadAdminNotifications();
-    } catch (error) {
-        console.error('Mark read error:', error);
-    }
-}
-async function markAllNotificationsRead() {
-    try {
-        const result = await apiRequest('/notifications/read-all', 'PUT');
-        if (result.success) {
-            loadAdminNotifications();
-            showAlert('success', `${result.updated} notifikasi ditandai dibaca`);
-        }
-    } catch (error) {
-        console.error('Mark all read error:', error);
-    }
-}
-function showNotificationToast(title, message, type = 'info') {
-    const container = document.getElementById('toastContainer');
-    if (!container) return;
-    const colors = { success: 'bg-green-500', error: 'bg-red-500', warning: 'bg-yellow-500', info: 'bg-blue-500' };
-    const icons = { success: 'fa-check-circle', error: 'fa-exclamation-circle', warning: 'fa-exclamation-triangle', info: 'fa-info-circle' };
-    const toast = document.createElement('div');
-    toast.className = `${colors[type]} text-white p-3 rounded-lg shadow-lg flex items-start gap-2 toast-slide-in min-w-[280px] max-w-sm`;
-    toast.innerHTML = `<i class="fas ${icons[type]} mt-0.5 text-sm"></i>
-        <div class="flex-1">
-            <p class="font-bold text-xs">${title}</p>
-            <p class="text-[10px] opacity-90">${message}</p>
-        </div>
-        <button onclick="this.parentElement.remove()" class="text-white/70 hover:text-white text-xs">✕</button>`;
-    container.appendChild(toast);
-    setTimeout(() => {
-        if (toast.parentElement) {
-            toast.classList.add('toast-slide-out');
-            setTimeout(() => toast.remove(), 300);
-        }
-    }, 5000);
-}
-function startNotificationPolling() {
-    if (notificationInterval) clearInterval(notificationInterval);
-    let lastCheck = null;
-    notificationInterval = setInterval(async () => {
-        if (!currentUser || currentUser.role === 'siswa') return;
-        try {
-            const result = await apiRequest('/notifications/admin');
-            if (result.success && result.data.length > 0) {
-                updateUnreadCount(result.data);
-                if (lastCheck) {
-                    const newNotifications = result.data.filter(n => new Date(n.tanggal) > lastCheck && n.status === 'unread');
-                    newNotifications.forEach(notif => showNotificationToast(notif.title, notif.message, notif.type));
-                }
-                lastCheck = new Date();
-            }
-        } catch (error) {
-            console.error('Polling error:', error);
-        }
-    }, 10000);
-}
+function formatTime(d) { const m = Math.floor((new Date() - new Date(d))/60000); if(m<1) return 'Baru saja'; if(m<60) return `${m} menit lalu`; if(m<1440) return `${Math.floor(m/60)} jam lalu`; return new Date(d).toLocaleDateString('id-ID'); }
+async function markRead(id) { await apiCall(`/notifications/${id}/read`,'PUT'); loadAdminNotifications(); }
+function startNotificationPolling() { if(notificationInterval) clearInterval(notificationInterval); notificationInterval = setInterval(()=>{ if(currentUser && (currentUser.role==='admin'||currentUser.role==='guru')) loadAdminNotifications(); }, 30000); }
 
 // ==========================================================================
-// START APPLICATION
+// START
 // ==========================================================================
-// Set default tab login
-switchLoginTab('siswa');
-
-// Event listeners
-document.getElementById('btnSiswaTab').onclick = () => switchLoginTab('siswa');
-document.getElementById('btnAdminTab').onclick = () => switchLoginTab('admin');
-
-// Check session
+function checkSession() {
+  const stored = localStorage.getItem('session');
+  if(stored){
+    try{
+      const data = JSON.parse(stored);
+      if(data && data.success){
+        currentUser = data;
+        document.getElementById('loginPage').style.display = 'none';
+        document.getElementById('dashboardContainer').classList.remove('hidden');
+        initDashboard();
+      }
+    } catch(e){ localStorage.removeItem('session'); }
+  }
+}
 checkSession();
 </script>
 </body>
