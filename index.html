@@ -54,10 +54,13 @@
 
 <!-- SPLASH SCREEN -->
 <div id="splashScreen" style="position: fixed; inset: 0; z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; background: linear-gradient(135deg, #0f172a, #1e1b4b, #0f172a); transition: opacity 0.5s;">
-  <img src="https://files.catbox.moe/3od6ig.png" alt="Logo" style="width: 100px; height: 100px; margin-bottom: 1rem;">
+  <img src="https://files.catbox.moe/3od6ig.png" alt="Logo" style="width: 100px; height: 100px; margin-bottom: 1rem; object-fit: contain;">
   <h1 style="color: white; font-size: 1.5rem; font-weight: bold;">SISTEM ABSENSI</h1>
-  <p style="color: #cbd5e1; margin: 0.5rem 0 1.5rem;">Presensi & Informasi Tarbiyatusshibyan</p>
-  <div style="width: 200px; height: 4px; background: rgba(255,255,255,0.2); border-radius: 999px; overflow: hidden;"><div id="splashProgress" style="width: 0%; height: 100%; background: white; transition: width 0.1s;"></div></div>
+  <p style="color: #cbd5e1; font-size: 0.875rem; margin: 0.5rem 0 1.5rem;">Presensi & Informasi Tarbiyatusshibyan</p>
+  <div style="width: 200px; height: 4px; background: rgba(255,255,255,0.2); border-radius: 999px; overflow: hidden;">
+    <div id="splashProgress" style="width: 0%; height: 100%; background: white; transition: width 0.05s;"></div>
+  </div>
+  <p style="color: #94a3b8; font-size: 0.7rem; margin-top: 1rem;">Memuat aplikasi...</p>
 </div>
 
 <div id="loadingOverlay"><div style="background: white; border-radius: 1rem; padding: 1.5rem; text-align: center;"><div class="spinner"></div><p>Memproses...</p></div></div>
@@ -128,1309 +131,846 @@
 </div>
 
 <script>
-  // ======================= KONFIGURASI API =======================
-  const API_BASE = 'https://absensi-api-delta.vercel.app/api';
-  
-  // ======================= GLOBAL VARIABLES =======================
-  let currentUser = null;
-  let siswaData = [];
-  let html5QrCode = null;
-  let adminChart = null;
-  let notificationInterval = null;
-  let isSidebarCollapsed = false;
-  let lastCheckedDate = new Date().toISOString().split('T')[0];
-  
-  // ======================= STORAGE LOKAL =======================
-  let localData = {
-    guru: JSON.parse(localStorage.getItem('local_guru') || '[]'),
-    izin: JSON.parse(localStorage.getItem('local_izin') || '[]'),
-    libur: JSON.parse(localStorage.getItem('local_libur') || '[]'),
-    absensi: JSON.parse(localStorage.getItem('local_absensi') || '[]'),
-    notifikasi: JSON.parse(localStorage.getItem('local_notifikasi') || '[]'),
-    pengumuman: JSON.parse(localStorage.getItem('local_pengumuman') || '[]')
-  };
-  
-  function saveLocalData() {
-    localStorage.setItem('local_guru', JSON.stringify(localData.guru));
-    localStorage.setItem('local_izin', JSON.stringify(localData.izin));
-    localStorage.setItem('local_libur', JSON.stringify(localData.libur));
-    localStorage.setItem('local_absensi', JSON.stringify(localData.absensi));
-    localStorage.setItem('local_notifikasi', JSON.stringify(localData.notifikasi));
-    localStorage.setItem('local_pengumuman', JSON.stringify(localData.pengumuman));
+// ======================= KONFIGURASI =======================
+const API_BASE = 'https://absensi-api-delta.vercel.app/api';
+
+// ======================= GLOBAL VARIABLES =======================
+let currentUser = null;
+let siswaData = [];
+let html5QrCode = null;
+let adminChart = null;
+let notificationInterval = null;
+let isSidebarCollapsed = false;
+
+// ======================= STORAGE LOKAL =======================
+let localData = {
+  guru: JSON.parse(localStorage.getItem('local_guru') || '[]'),
+  izin: JSON.parse(localStorage.getItem('local_izin') || '[]'),
+  libur: JSON.parse(localStorage.getItem('local_libur') || '[]'),
+  absensi: JSON.parse(localStorage.getItem('local_absensi') || '[]'),
+  notifikasi: JSON.parse(localStorage.getItem('local_notifikasi') || '[]'),
+  pengumuman: JSON.parse(localStorage.getItem('local_pengumuman') || '[]')
+};
+
+function saveLocalData() {
+  localStorage.setItem('local_guru', JSON.stringify(localData.guru));
+  localStorage.setItem('local_izin', JSON.stringify(localData.izin));
+  localStorage.setItem('local_libur', JSON.stringify(localData.libur));
+  localStorage.setItem('local_absensi', JSON.stringify(localData.absensi));
+  localStorage.setItem('local_notifikasi', JSON.stringify(localData.notifikasi));
+  localStorage.setItem('local_pengumuman', JSON.stringify(localData.pengumuman));
+}
+
+// ======================= HELPER FUNCTIONS =======================
+function showLoading() { 
+  const overlay = document.getElementById('loadingOverlay');
+  if (overlay) overlay.classList.add('active'); 
+}
+
+function hideLoading() { 
+  const overlay = document.getElementById('loadingOverlay');
+  if (overlay) overlay.classList.remove('active'); 
+}
+
+function showToast(title, msg, type = 'info') {
+  const c = document.getElementById('toastContainer');
+  const colors = { success: '#10b981', error: '#ef4444', info: '#3b82f6' };
+  const toast = document.createElement('div');
+  toast.style.cssText = `background: ${colors[type]}; color: white; padding: 0.75rem; border-radius: 0.5rem; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); display: flex; align-items: start; gap: 0.75rem; min-width: 260px; animation: slideInRight 0.3s ease; margin-bottom: 0.5rem; z-index: 1000;`;
+  toast.innerHTML = `<i class="fas ${type === 'success' ? 'fa-check-circle' : type === 'error' ? 'fa-exclamation-circle' : 'fa-info-circle'} mt-0.5"></i><div style="flex:1;"><p style="font-weight: bold;">${title}</p><p style="font-size: 0.75rem; opacity: 0.9;">${msg}</p></div><button onclick="this.parentElement.remove()" style="background: none; border: none; color: rgba(255,255,255,0.7); cursor: pointer;">✕</button>`;
+  c.appendChild(toast);
+  setTimeout(() => toast.remove(), 4000);
+}
+
+function updateLiveClock() {
+  const now = new Date();
+  const waktu = now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  const clockElem = document.getElementById('liveClock');
+  if (clockElem) clockElem.innerHTML = `<i class="far fa-clock mr-1"></i>${waktu}`;
+}
+
+// ======================= API CALLS =======================
+async function callAPI(endpoint, method = 'GET', body = null) {
+  try {
+    const options = { method, headers: { 'Content-Type': 'application/json' } };
+    if (body) options.body = JSON.stringify(body);
+    if (currentUser?.token) options.headers['Authorization'] = `Bearer ${currentUser.token}`;
+    const response = await fetch(`${API_BASE}${endpoint}`, options);
+    return await response.json();
+  } catch (error) {
+    console.error('API Error:', error);
+    return { success: false, message: 'Gagal terhubung ke server' };
   }
-  
-  // ======================= API CALLS =======================
-  async function callAPI(endpoint, method = 'GET', body = null) {
-    try {
-      const options = { method, headers: { 'Content-Type': 'application/json' } };
-      if (body) options.body = JSON.stringify(body);
-      if (currentUser?.token) options.headers['Authorization'] = `Bearer ${currentUser.token}`;
-      
-      const response = await fetch(`${API_BASE}${endpoint}`, options);
-      const result = await response.json();
-      console.log(`API ${method} ${endpoint}:`, result);
-      return result;
-    } catch (error) {
-      console.error('API Error:', error);
-      return { success: false, message: 'Gagal terhubung ke server', error: error.message };
-    }
-  }
-  
-  // Ambil data siswa dari API
-  async function loadSiswaFromAPI() {
-    showLoading();
-    try {
-      const result = await callAPI('/siswa');
-      if (result.success && result.data) {
-        siswaData = result.data;
-        console.log(`✅ ${siswaData.length} siswa dari API`);
-      } else if (Array.isArray(result)) {
-        siswaData = result;
-        console.log(`✅ ${siswaData.length} siswa dari API (array langsung)`);
-      } else if (result.data && Array.isArray(result.data)) {
-        siswaData = result.data;
-        console.log(`✅ ${siswaData.length} siswa dari API`);
-      } else {
-        siswaData = [];
-        console.warn('⚠️ Tidak ada data siswa dari API');
-      }
-      hideLoading();
-      return siswaData;
-    } catch (error) {
+}
+
+async function loadSiswaFromAPI() {
+  showLoading();
+  try {
+    const result = await callAPI('/siswa');
+    if (result.success && result.data) {
+      siswaData = result.data;
+    } else if (Array.isArray(result)) {
+      siswaData = result;
+    } else if (result.data && Array.isArray(result.data)) {
+      siswaData = result.data;
+    } else {
       siswaData = [];
-      hideLoading();
-      return [];
     }
+    hideLoading();
+    return siswaData;
+  } catch (error) {
+    siswaData = [];
+    hideLoading();
+    return [];
+  }
+}
+
+// ======================= SIDEBAR FUNCTIONS =======================
+function toggleSidebarDesktop() {
+  const sidebar = document.getElementById('sidebar');
+  const main = document.getElementById('mainContent');
+  const btn = document.getElementById('toggleSidebarBtn');
+  if (isSidebarCollapsed) {
+    sidebar.classList.remove('collapsed');
+    main.classList.remove('expanded');
+    if (btn) btn.innerHTML = '<i class="fas fa-chevron-left"></i>';
+    isSidebarCollapsed = false;
+  } else {
+    sidebar.classList.add('collapsed');
+    main.classList.add('expanded');
+    if (btn) btn.innerHTML = '<i class="fas fa-chevron-right"></i>';
+    isSidebarCollapsed = true;
+  }
+}
+
+function toggleSidebarMobile() { 
+  document.getElementById('sidebar').classList.toggle('mobile-open'); 
+  document.getElementById('mobileOverlay').classList.toggle('active'); 
+}
+
+function closeSidebarMobile() { 
+  document.getElementById('sidebar').classList.remove('mobile-open'); 
+  document.getElementById('mobileOverlay').classList.remove('active'); 
+}
+
+function closeNotificationPanel() { 
+  document.getElementById('notificationPanel').style.display = 'none'; 
+}
+
+function toggleNotificationPanel() { 
+  const p = document.getElementById('notificationPanel'); 
+  p.style.display = p.style.display === 'none' ? 'block' : 'none'; 
+  if (p.style.display === 'block') loadNotifications(); 
+}
+
+function logout() {
+  if (html5QrCode) try { html5QrCode.stop(); } catch(e) {}
+  if (notificationInterval) clearInterval(notificationInterval);
+  localStorage.removeItem('session');
+  currentUser = null;
+  document.getElementById('dashboardContainer').style.display = 'none';
+  document.getElementById('loginPage').style.display = 'flex';
+  closeSidebarMobile();
+}
+
+// ======================= NOTIFIKASI =======================
+async function loadNotifications() {
+  if (!currentUser) return;
+  let notif = [...localData.notifikasi];
+  if (currentUser.role === 'siswa') notif = notif.filter(n => n.target === 'all' || n.target_nisn === currentUser.nisn);
+  else if (currentUser.role === 'guru') notif = notif.filter(n => n.target === 'guru' || n.target === 'all' || n.target === 'admin');
+  else notif = notif.filter(n => n.target === 'admin' || n.target === 'all');
+  
+  const unread = notif.filter(n => !n.dibaca).length;
+  const badge = document.getElementById('notifBadge');
+  if (badge) {
+    if (unread > 0) { badge.innerText = unread; badge.style.display = 'flex'; } 
+    else { badge.style.display = 'none'; }
   }
   
-  // ======================= HELPER FUNCTIONS =======================
-  function showLoading() { document.getElementById('loadingOverlay').classList.add('active'); }
-  function hideLoading() { document.getElementById('loadingOverlay').classList.remove('active'); }
-  
-  function showToast(title, msg, type = 'info') {
-    const c = document.getElementById('toastContainer');
-    const colors = { success: '#10b981', error: '#ef4444', info: '#3b82f6' };
-    const toast = document.createElement('div');
-    toast.style.cssText = `background: ${colors[type]}; color: white; padding: 0.75rem; border-radius: 0.5rem; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); display: flex; align-items: start; gap: 0.75rem; min-width: 260px; animation: slideInRight 0.3s ease; margin-bottom: 0.5rem; z-index: 1000;`;
-    toast.innerHTML = `<i class="fas ${type === 'success' ? 'fa-check-circle' : type === 'error' ? 'fa-exclamation-circle' : 'fa-info-circle'} mt-0.5"></i><div style="flex:1;"><p style="font-weight: bold;">${title}</p><p style="font-size: 0.75rem; opacity: 0.9;">${msg}</p></div><button onclick="this.parentElement.remove()" style="background: none; border: none; color: rgba(255,255,255,0.7); cursor: pointer;">✕</button>`;
-    c.appendChild(toast);
-    setTimeout(() => toast.remove(), 4000);
-  }
-  
-  function updateLiveClock() {
-    const now = new Date();
-    const waktu = now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-    const clockElem = document.getElementById('liveClock');
-    if (clockElem) clockElem.innerHTML = `<i class="far fa-clock mr-1"></i>${waktu}`;
-  }
-  setInterval(updateLiveClock, 1000);
-  
-  // Reset absensi setiap hari
-  function checkAndResetDaily() {
-    const today = new Date().toISOString().split('T')[0];
-    if (lastCheckedDate !== today) {
-      lastCheckedDate = today;
-      const currentTitle = document.getElementById('pageTitle')?.innerText;
-      if (currentTitle === 'Dashboard Siswa') loadSiswaDashboard();
-      if (currentTitle === 'Kelola Absensi') loadKelolaAbsensi();
-      if (currentTitle === 'Monitoring Kehadiran') loadMonitoring();
-    }
-  }
-  setInterval(checkAndResetDaily, 60000);
-  
-  // ======================= SIDEBAR & UI =======================
-  function toggleSidebarDesktop() {
-    const sidebar = document.getElementById('sidebar');
-    const main = document.getElementById('mainContent');
-    const btn = document.getElementById('toggleSidebarBtn');
-    if (isSidebarCollapsed) {
-      sidebar.classList.remove('collapsed');
-      main.classList.remove('expanded');
-      if (btn) btn.innerHTML = '<i class="fas fa-chevron-left"></i>';
-      isSidebarCollapsed = false;
+  const list = document.getElementById('notificationList');
+  if (list && document.getElementById('notificationPanel').style.display === 'block') {
+    if (notif.length === 0) {
+      list.innerHTML = '<div class="p-4 text-center text-gray-400">Tidak ada notifikasi</div>';
     } else {
-      sidebar.classList.add('collapsed');
-      main.classList.add('expanded');
-      if (btn) btn.innerHTML = '<i class="fas fa-chevron-right"></i>';
-      isSidebarCollapsed = true;
-    }
-  }
-  function toggleSidebarMobile() { document.getElementById('sidebar').classList.toggle('mobile-open'); document.getElementById('mobileOverlay').classList.toggle('active'); }
-  function closeSidebarMobile() { document.getElementById('sidebar').classList.remove('mobile-open'); document.getElementById('mobileOverlay').classList.remove('active'); }
-  function closeNotificationPanel() { document.getElementById('notificationPanel').style.display = 'none'; }
-  function toggleNotificationPanel() { const p = document.getElementById('notificationPanel'); p.style.display = p.style.display === 'none' ? 'block' : 'none'; if (p.style.display === 'block') loadNotifications(); }
-  
-  function logout() {
-    if (html5QrCode) try { html5QrCode.stop(); } catch(e) {}
-    if (notificationInterval) clearInterval(notificationInterval);
-    localStorage.removeItem('session');
-    currentUser = null;
-    document.getElementById('dashboardContainer').style.display = 'none';
-    document.getElementById('loginPage').style.display = 'flex';
-    closeSidebarMobile();
-  }
-  
-  // ======================= NOTIFIKASI =======================
-  async function loadNotifications() {
-    if (!currentUser) return;
-    let notif = [...localData.notifikasi];
-    if (currentUser.role === 'siswa') notif = notif.filter(n => n.target === 'all' || n.target_nisn === currentUser.nisn);
-    else if (currentUser.role === 'guru') notif = notif.filter(n => n.target === 'guru' || n.target === 'all' || n.target === 'admin');
-    else notif = notif.filter(n => n.target === 'admin' || n.target === 'all');
-    
-    const unread = notif.filter(n => !n.dibaca).length;
-    const badge = document.getElementById('notifBadge');
-    if (unread > 0) { badge.innerText = unread; badge.style.display = 'flex'; } else { badge.style.display = 'none'; }
-    
-    const list = document.getElementById('notificationList');
-    if (list && document.getElementById('notificationPanel').style.display === 'block') {
-      if (notif.length === 0) {
-        list.innerHTML = '<div class="p-4 text-center text-gray-400">Tidak ada notifikasi</div>';
-      } else {
-        list.innerHTML = notif.slice(0, 30).map(n => `
-          <div class="p-3 border-b hover:bg-gray-50 ${!n.dibaca ? 'bg-blue-50' : ''}">
-            <div class="flex justify-between items-start">
-              <div class="flex-1 cursor-pointer" onclick="markNotificationRead('${n.id}')">
-                <p class="text-sm font-semibold">${n.judul}</p>
-                <p class="text-xs text-gray-600 mt-1">${n.pesan}</p>
-                <p class="text-[10px] text-gray-400 mt-1">${new Date(n.createdAt).toLocaleString()}</p>
-              </div>
-              <button onclick="deleteNotification('${n.id}')" class="text-gray-400 hover:text-red-500 ml-2"><i class="fas fa-trash-alt text-xs"></i></button>
+      list.innerHTML = notif.slice(0, 30).map(n => `
+        <div class="p-3 border-b hover:bg-gray-50 ${!n.dibaca ? 'bg-blue-50' : ''}">
+          <div class="flex justify-between items-start">
+            <div class="flex-1 cursor-pointer" onclick="markNotificationRead('${n.id}')">
+              <p class="text-sm font-semibold">${n.judul}</p>
+              <p class="text-xs text-gray-600 mt-1">${n.pesan}</p>
+              <p class="text-[10px] text-gray-400 mt-1">${new Date(n.createdAt).toLocaleString()}</p>
             </div>
+            <button onclick="deleteNotification('${n.id}')" class="text-gray-400 hover:text-red-500 ml-2"><i class="fas fa-trash-alt text-xs"></i></button>
           </div>
-        `).join('');
-      }
-    }
-  }
-  
-  function markNotificationRead(id) {
-    const notif = localData.notifikasi.find(n => n.id == id);
-    if (notif) notif.dibaca = true;
-    saveLocalData();
-    loadNotifications();
-  }
-  
-  function deleteNotification(id) {
-    localData.notifikasi = localData.notifikasi.filter(n => n.id != id);
-    saveLocalData();
-    loadNotifications();
-    showToast('Berhasil', 'Notifikasi dihapus', 'success');
-  }
-  
-  function deleteAllNotifications() {
-    Swal.fire({ title: 'Hapus Semua Notifikasi', text: 'Yakin ingin menghapus semua?', icon: 'warning', showCancelButton: true, confirmButtonText: 'Ya, hapus semua' }).then((result) => {
-      if (result.isConfirmed) { localData.notifikasi = []; saveLocalData(); loadNotifications(); showToast('Berhasil', 'Semua notifikasi dihapus', 'success'); }
-    });
-  }
-  
-  function addNotification(judul, pesan, target, targetNisn = null) {
-    localData.notifikasi.unshift({ id: Date.now(), judul, pesan, target, target_nisn: targetNisn, dibaca: false, createdAt: new Date().toISOString() });
-    if (localData.notifikasi.length > 100) localData.notifikasi = localData.notifikasi.slice(0, 100);
-    saveLocalData();
-    loadNotifications();
-  }
-  
-  // ======================= LOGIN =======================
-  document.getElementById('btnSiswaTab').onclick = function() {
-    this.className = 'flex-1 py-1.5 text-xs font-semibold rounded-lg bg-white text-indigo-600 shadow-sm flex items-center justify-center gap-1';
-    document.getElementById('btnAdminTab').className = 'flex-1 py-1.5 text-xs font-medium rounded-lg text-gray-500 flex items-center justify-center gap-1';
-    document.getElementById('formSiswaLogin').style.display = 'block';
-    document.getElementById('formAdminLogin').style.display = 'none';
-    document.getElementById('loginError').style.display = 'none';
-  };
-  
-  document.getElementById('btnAdminTab').onclick = function() {
-    this.className = 'flex-1 py-1.5 text-xs font-semibold rounded-lg bg-white text-indigo-600 shadow-sm flex items-center justify-center gap-1';
-    document.getElementById('btnSiswaTab').className = 'flex-1 py-1.5 text-xs font-medium rounded-lg text-gray-500 flex items-center justify-center gap-1';
-    document.getElementById('formSiswaLogin').style.display = 'none';
-    document.getElementById('formAdminLogin').style.display = 'block';
-    document.getElementById('loginError').style.display = 'none';
-  };
-  
-  document.getElementById('loginForm').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    showLoading();
-    
-    const isAdminTab = document.getElementById('formAdminLogin').style.display !== 'none';
-    let result;
-    
-    if (isAdminTab) {
-      const username = document.getElementById('username').value.trim();
-      const password = document.getElementById('password').value.trim();
-      if (!username || !password) {
-        hideLoading();
-        showToast('Error', 'Username dan password harus diisi', 'error');
-        return;
-      }
-      result = await callAPI('/auth/login', 'POST', { username, password });
-    } else {
-      const nisn = document.getElementById('nisn').value.trim();
-      if (!nisn) {
-        hideLoading();
-        showToast('Error', 'NISN harus diisi', 'error');
-        return;
-      }
-      result = await callAPI('/auth/login', 'POST', { nisn: nisn });
-    }
-    
-    hideLoading();
-    console.log('Login response:', result);
-    
-    if (result && result.success === true) {
-      await loadSiswaFromAPI();
-      
-      currentUser = {
-        id: result.nisn || result.username || result.id,
-        username: result.username || '',
-        nisn: result.nisn || '',
-        nama: result.nama || (isAdminTab ? (result.username === 'admin' ? 'Administrator' : result.username) : 'Siswa'),
-        role: result.role || (isAdminTab ? (result.username === 'admin' ? 'admin' : 'guru') : 'siswa'),
-        kelas: result.kelas || '',
-        token: result.token
-      };
-      
-      localStorage.setItem('session', JSON.stringify(currentUser));
-      document.getElementById('loginPage').style.display = 'none';
-      document.getElementById('dashboardContainer').style.display = 'block';
-      await loadSiswaFromAPI();
-      initDashboard();
-      showToast('Selamat Datang', currentUser.nama, 'success');
-    } else {
-      document.getElementById('loginError').style.display = 'block';
-      document.getElementById('errorText').innerText = result?.message || result?.error || 'Login gagal. Periksa kembali NISN/Username/Password Anda.';
-      setTimeout(() => document.getElementById('loginError').style.display = 'none', 3000);
-    }
-  });
-  
-  // ======================= DASHBOARD INIT =======================
-  async function initDashboard() {
-    document.getElementById('navUserName').innerHTML = currentUser.nama;
-    document.getElementById('navUserRole').innerHTML = currentUser.role.toUpperCase();
-    document.getElementById('navUserInitial').innerHTML = currentUser.nama.charAt(0).toUpperCase();
-    updateLiveClock();
-    
-    const menu = document.getElementById('sidebarMenu');
-    let html = '';
-    
-    if (currentUser.role === 'admin') {
-      html = '<button onclick="loadAdminDashboard()" class="nav-item w-full flex items-center gap-3 p-3 rounded-xl text-gray-300 hover:text-white"><i class="fas fa-home w-5"></i><span class="sidebar-label">Dashboard</span></button>';
-      html += '<button onclick="loadDataSiswa()" class="nav-item w-full flex items-center gap-3 p-3 rounded-xl text-gray-300 hover:text-white"><i class="fas fa-users w-5"></i><span class="sidebar-label">Data Siswa</span></button>';
-      html += '<button onclick="loadDataGuru()" class="nav-item w-full flex items-center gap-3 p-3 rounded-xl text-gray-300 hover:text-white"><i class="fas fa-chalkboard-user w-5"></i><span class="sidebar-label">Data Guru</span></button>';
-      html += '<button onclick="loadKelolaAbsensi()" class="nav-item w-full flex items-center gap-3 p-3 rounded-xl text-gray-300 hover:text-white"><i class="fas fa-clipboard-list w-5"></i><span class="sidebar-label">Kelola Absen</span></button>';
-      html += '<button onclick="loadRekapAbsensi()" class="nav-item w-full flex items-center gap-3 p-3 rounded-xl text-gray-300 hover:text-white"><i class="fas fa-file-excel w-5"></i><span class="sidebar-label">Rekap Absen</span></button>';
-      html += '<button onclick="loadKelolaLibur()" class="nav-item w-full flex items-center gap-3 p-3 rounded-xl text-gray-300 hover:text-white"><i class="fas fa-calendar-alt w-5"></i><span class="sidebar-label">Hari Libur</span></button>';
-      html += '<button onclick="loadIzinList()" class="nav-item w-full flex items-center gap-3 p-3 rounded-xl text-gray-300 hover:text-white"><i class="fas fa-clipboard-list w-5"></i><span class="sidebar-label">Kelola Izin</span></button>';
-      html += '<button onclick="showPengumumanModal()" class="nav-item w-full flex items-center gap-3 p-3 rounded-xl text-gray-300 hover:text-white"><i class="fas fa-bullhorn w-5"></i><span class="sidebar-label">Buat Pengumuman</span></button>';
-      html += '<button onclick="loadScanAbsensi()" class="nav-item w-full flex items-center gap-3 p-3 rounded-xl text-gray-300 hover:text-white"><i class="fas fa-qrcode w-5"></i><span class="sidebar-label">Scan QR</span></button>';
-      loadAdminDashboard();
-    } else if (currentUser.role === 'guru') {
-      html = '<button onclick="loadGuruDashboard()" class="nav-item w-full flex items-center gap-3 p-3 rounded-xl text-gray-300 hover:text-white"><i class="fas fa-home w-5"></i><span class="sidebar-label">Dashboard</span></button>';
-      html += '<button onclick="loadMonitoring()" class="nav-item w-full flex items-center gap-3 p-3 rounded-xl text-gray-300 hover:text-white"><i class="fas fa-eye w-5"></i><span class="sidebar-label">Monitoring</span></button>';
-      html += '<button onclick="loadScanAbsensi()" class="nav-item w-full flex items-center gap-3 p-3 rounded-xl text-gray-300 hover:text-white"><i class="fas fa-qrcode w-5"></i><span class="sidebar-label">Scan QR</span></button>';
-      loadGuruDashboard();
-    } else {
-      html = '<button onclick="loadSiswaDashboard()" class="nav-item w-full flex items-center gap-3 p-3 rounded-xl text-gray-300 hover:text-white"><i class="fas fa-home w-5"></i><span class="sidebar-label">Dashboard</span></button>';
-      html += '<button onclick="loadQRCodeSiswa()" class="nav-item w-full flex items-center gap-3 p-3 rounded-xl text-gray-300 hover:text-white"><i class="fas fa-id-card w-5"></i><span class="sidebar-label">Kartu Digital</span></button>';
-      loadSiswaDashboard();
-    }
-    menu.innerHTML = html;
-    loadNotifications();
-    notificationInterval = setInterval(loadNotifications, 30000);
-    document.getElementById('logoutButton').onclick = (e) => { e.preventDefault(); logout(); };
-  }
-  
-  // ======================= DASHBOARD ADMIN =======================
-  async function loadAdminDashboard() {
-    document.getElementById('pageTitle').innerHTML = 'Dashboard Admin';
-    showLoading();
-    await loadSiswaFromAPI();
-    const pendingIzin = localData.izin.filter(i => i.status === 'pending').length;
-    const today = new Date().toISOString().split('T')[0];
-    const absenToday = localData.absensi.filter(a => a.tanggal === today).length;
-    const totalGuru = localData.guru.length;
-    hideLoading();
-    
-    document.getElementById('mainContentArea').innerHTML = `
-      <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
-        <div class="bg-white p-4 rounded-xl shadow-sm border-l-4 border-indigo-500"><p class="text-gray-400 text-xs">Total Siswa</p><p class="text-2xl font-bold">${siswaData.length}</p></div>
-        <div class="bg-white p-4 rounded-xl shadow-sm border-l-4 border-yellow-500"><p class="text-gray-400 text-xs">Izin Menunggu</p><p class="text-2xl font-bold text-yellow-600">${pendingIzin}</p></div>
-        <div class="bg-white p-4 rounded-xl shadow-sm border-l-4 border-green-500"><p class="text-gray-400 text-xs">Absen Hari Ini</p><p class="text-2xl font-bold text-green-600">${absenToday}</p></div>
-        <div class="bg-white p-4 rounded-xl shadow-sm border-l-4 border-blue-500"><p class="text-gray-400 text-xs">Total Guru</p><p class="text-2xl font-bold text-blue-600">${totalGuru}</p></div>
-      </div>
-      <div class="bg-white rounded-xl p-4 shadow-sm mb-6"><canvas id="adminChart" height="200"></canvas></div>
-      <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <button onclick="loadDataSiswa()" class="bg-indigo-50 p-4 rounded-xl text-center hover:bg-indigo-100"><i class="fas fa-users text-2xl mb-2 block text-indigo-600"></i><span class="text-xs">Data Siswa</span></button>
-        <button onclick="loadKelolaAbsensi()" class="bg-green-50 p-4 rounded-xl text-center hover:bg-green-100"><i class="fas fa-clipboard-list text-2xl mb-2 block text-green-600"></i><span class="text-xs">Kelola Absen</span></button>
-        <button onclick="loadRekapAbsensi()" class="bg-blue-50 p-4 rounded-xl text-center hover:bg-blue-100"><i class="fas fa-file-excel text-2xl mb-2 block text-blue-600"></i><span class="text-xs">Rekap Absen</span></button>
-        <button onclick="loadScanAbsensi()" class="bg-purple-50 p-4 rounded-xl text-center hover:bg-purple-100"><i class="fas fa-qrcode text-2xl mb-2 block text-purple-600"></i><span class="text-xs">Scan QR</span></button>
-      </div>
-    `;
-    
-    const ctx = document.getElementById('adminChart');
-    if (ctx) {
-      const totalHadir = localData.absensi.filter(a => a.status === 'Hadir').length;
-      const totalSakit = localData.absensi.filter(a => a.status === 'Sakit').length;
-      const totalIzin = localData.absensi.filter(a => a.status === 'Izin').length;
-      const totalAlpa = localData.absensi.filter(a => a.status === 'Alpa').length;
-      if (adminChart) adminChart.destroy();
-      adminChart = new Chart(ctx, { type: 'bar', data: { labels: ['Hadir', 'Sakit', 'Izin', 'Alpa'], datasets: [{ label: 'Jumlah', data: [totalHadir, totalSakit, totalIzin, totalAlpa], backgroundColor: ['#10B981', '#F59E0B', '#3B82F6', '#EF4444'], borderRadius: 8 }] }, options: { responsive: true } });
-    }
-  }
-  
-  // ======================= DATA SISWA =======================
-  async function loadDataSiswa() {
-    document.getElementById('pageTitle').innerHTML = 'Data Siswa (Dari API)';
-    showLoading();
-    await loadSiswaFromAPI();
-    hideLoading();
-    
-    if (!siswaData || siswaData.length === 0) {
-      document.getElementById('mainContentArea').innerHTML = `
-        <div class="bg-white rounded-xl p-8 text-center">
-          <i class="fas fa-database text-4xl text-gray-400 mb-3"></i>
-          <p class="text-gray-500">Belum ada data siswa dari API</p>
-          <button onclick="loadDataSiswa()" class="mt-4 bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm">Refresh Data</button>
         </div>
-      `;
+      `).join('');
+    }
+  }
+}
+
+function markNotificationRead(id) {
+  const notif = localData.notifikasi.find(n => n.id == id);
+  if (notif) notif.dibaca = true;
+  saveLocalData();
+  loadNotifications();
+}
+
+function deleteNotification(id) {
+  localData.notifikasi = localData.notifikasi.filter(n => n.id != id);
+  saveLocalData();
+  loadNotifications();
+  showToast('Berhasil', 'Notifikasi dihapus', 'success');
+}
+
+function deleteAllNotifications() {
+  Swal.fire({ title: 'Hapus Semua Notifikasi', text: 'Yakin ingin menghapus semua?', icon: 'warning', showCancelButton: true, confirmButtonText: 'Ya, hapus semua' }).then((result) => {
+    if (result.isConfirmed) { localData.notifikasi = []; saveLocalData(); loadNotifications(); showToast('Berhasil', 'Semua notifikasi dihapus', 'success'); }
+  });
+}
+
+function addNotification(judul, pesan, target, targetNisn = null) {
+  localData.notifikasi.unshift({ id: Date.now(), judul, pesan, target, target_nisn: targetNisn, dibaca: false, createdAt: new Date().toISOString() });
+  if (localData.notifikasi.length > 100) localData.notifikasi = localData.notifikasi.slice(0, 100);
+  saveLocalData();
+  loadNotifications();
+}
+
+// ======================= LOGIN =======================
+document.getElementById('btnSiswaTab').onclick = function() {
+  this.className = 'flex-1 py-1.5 text-xs font-semibold rounded-lg bg-white text-indigo-600 shadow-sm flex items-center justify-center gap-1';
+  document.getElementById('btnAdminTab').className = 'flex-1 py-1.5 text-xs font-medium rounded-lg text-gray-500 flex items-center justify-center gap-1';
+  document.getElementById('formSiswaLogin').style.display = 'block';
+  document.getElementById('formAdminLogin').style.display = 'none';
+  document.getElementById('loginError').style.display = 'none';
+};
+
+document.getElementById('btnAdminTab').onclick = function() {
+  this.className = 'flex-1 py-1.5 text-xs font-semibold rounded-lg bg-white text-indigo-600 shadow-sm flex items-center justify-center gap-1';
+  document.getElementById('btnSiswaTab').className = 'flex-1 py-1.5 text-xs font-medium rounded-lg text-gray-500 flex items-center justify-center gap-1';
+  document.getElementById('formSiswaLogin').style.display = 'none';
+  document.getElementById('formAdminLogin').style.display = 'block';
+  document.getElementById('loginError').style.display = 'none';
+};
+
+document.getElementById('loginForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  showLoading();
+  
+  const isAdminTab = document.getElementById('formAdminLogin').style.display !== 'none';
+  let result;
+  
+  if (isAdminTab) {
+    const username = document.getElementById('username').value.trim();
+    const password = document.getElementById('password').value.trim();
+    if (!username || !password) {
+      hideLoading();
+      showToast('Error', 'Username dan password harus diisi', 'error');
       return;
     }
-    
-    document.getElementById('mainContentArea').innerHTML = `
-      <div class="bg-white rounded-xl p-4 shadow-sm mb-4">
-        <div class="flex justify-between items-center flex-wrap gap-3">
-          <input type="text" id="searchSiswa" placeholder="Cari nama atau NISN..." class="flex-1 px-3 py-2 border rounded-lg text-sm">
-          <span class="text-sm text-gray-500 bg-gray-100 px-3 py-2 rounded-lg"><i class="fas fa-database mr-1"></i> ${siswaData.length} siswa dari API</span>
-          <button onclick="loadDataSiswa()" class="bg-indigo-100 text-indigo-700 px-3 py-2 rounded-lg text-sm"><i class="fas fa-sync-alt mr-1"></i> Refresh</button>
-        </div>
-      </div>
-      <div class="bg-white rounded-xl shadow-sm overflow-hidden">
-        <div class="overflow-x-auto"><table class="w-full text-sm"><thead class="bg-gray-50"><tr><th class="p-3 text-left">NISN</th><th class="p-3 text-left">Nama</th><th class="p-3 text-left">Kelas</th><th class="p-3 text-center">Status</th></tr></thead><tbody id="siswaTable">${siswaData.map(s => `<tr><td class="p-3 font-mono">${s.nisn}</td><td class="p-3 font-medium">${s.nama}</td><td class="p-3">${s.kelas || '-'}</td><td class="p-3 text-center"><span class="px-2 py-1 rounded-full text-xs bg-green-100 text-green-700">Aktif</span></td></tr>`).join('')}</tbody>}</div>
-      </div>
-    `;
-    document.getElementById('searchSiswa')?.addEventListener('keyup', (e) => {
-      const val = e.target.value.toLowerCase();
-      document.querySelectorAll('#siswaTable tr').forEach(r => { r.style.display = r.innerText.toLowerCase().includes(val) ? '' : 'none'; });
-    });
+    result = await callAPI('/auth/login', 'POST', { username, password });
+  } else {
+    const nisn = document.getElementById('nisn').value.trim();
+    if (!nisn) {
+      hideLoading();
+      showToast('Error', 'NISN harus diisi', 'error');
+      return;
+    }
+    result = await callAPI('/auth/login', 'POST', { nisn: nisn });
   }
   
-  // ======================= DASHBOARD SISWA =======================
-  async function loadSiswaDashboard() {
-    document.getElementById('pageTitle').innerHTML = 'Dashboard Siswa';
-    showLoading();
+  hideLoading();
+  
+  if (result && result.success === true) {
     await loadSiswaFromAPI();
-    document.getElementById('navUserName').innerHTML = currentUser.nama;
     
-    const today = new Date().toISOString().split('T')[0];
-    const absenToday = localData.absensi.find(a => a.nisn == currentUser.nisn && a.tanggal === today);
-    const myIzin = localData.izin.filter(i => i.nisn == currentUser.nisn);
-    const pengumuman = localData.pengumuman;
-    const now = new Date();
-    const currentTime = now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-    const currentDateFormatted = now.toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
-    hideLoading();
+    currentUser = {
+      id: result.nisn || result.username || result.id,
+      username: result.username || '',
+      nisn: result.nisn || '',
+      nama: result.nama || (isAdminTab ? (result.username === 'admin' ? 'Administrator' : result.username) : 'Siswa'),
+      role: result.role || (isAdminTab ? (result.username === 'admin' ? 'admin' : 'guru') : 'siswa'),
+      kelas: result.kelas || '',
+      token: result.token
+    };
     
-    const statusClass = { pending: 'bg-yellow-100 text-yellow-700', disetujui: 'bg-green-100 text-green-700', ditolak: 'bg-red-100 text-red-700' };
-    const statusText = { pending: 'Menunggu', disetujui: 'Disetujui', ditolak: 'Ditolak' };
-    
+    localStorage.setItem('session', JSON.stringify(currentUser));
+    document.getElementById('loginPage').style.display = 'none';
+    document.getElementById('dashboardContainer').style.display = 'block';
+    await loadSiswaFromAPI();
+    initDashboard();
+    showToast('Selamat Datang', currentUser.nama, 'success');
+  } else {
+    document.getElementById('loginError').style.display = 'block';
+    document.getElementById('errorText').innerText = result?.message || result?.error || 'Login gagal. Periksa kembali NISN/Username/Password Anda.';
+    setTimeout(() => document.getElementById('loginError').style.display = 'none', 3000);
+  }
+});
+
+// ======================= DASHBOARD INIT =======================
+async function initDashboard() {
+  document.getElementById('navUserName').innerHTML = currentUser.nama;
+  document.getElementById('navUserRole').innerHTML = currentUser.role.toUpperCase();
+  document.getElementById('navUserInitial').innerHTML = currentUser.nama.charAt(0).toUpperCase();
+  updateLiveClock();
+  
+  const menu = document.getElementById('sidebarMenu');
+  let html = '';
+  
+  if (currentUser.role === 'admin') {
+    html = '<button onclick="loadAdminDashboard()" class="nav-item w-full flex items-center gap-3 p-3 rounded-xl text-gray-300 hover:text-white"><i class="fas fa-home w-5"></i><span class="sidebar-label">Dashboard</span></button>';
+    html += '<button onclick="loadDataSiswa()" class="nav-item w-full flex items-center gap-3 p-3 rounded-xl text-gray-300 hover:text-white"><i class="fas fa-users w-5"></i><span class="sidebar-label">Data Siswa</span></button>';
+    html += '<button onclick="loadDataGuru()" class="nav-item w-full flex items-center gap-3 p-3 rounded-xl text-gray-300 hover:text-white"><i class="fas fa-chalkboard-user w-5"></i><span class="sidebar-label">Data Guru</span></button>';
+    html += '<button onclick="loadKelolaAbsensi()" class="nav-item w-full flex items-center gap-3 p-3 rounded-xl text-gray-300 hover:text-white"><i class="fas fa-clipboard-list w-5"></i><span class="sidebar-label">Kelola Absen</span></button>';
+    html += '<button onclick="loadRekapAbsensi()" class="nav-item w-full flex items-center gap-3 p-3 rounded-xl text-gray-300 hover:text-white"><i class="fas fa-file-excel w-5"></i><span class="sidebar-label">Rekap Absen</span></button>';
+    html += '<button onclick="loadKelolaLibur()" class="nav-item w-full flex items-center gap-3 p-3 rounded-xl text-gray-300 hover:text-white"><i class="fas fa-calendar-alt w-5"></i><span class="sidebar-label">Hari Libur</span></button>';
+    html += '<button onclick="loadIzinList()" class="nav-item w-full flex items-center gap-3 p-3 rounded-xl text-gray-300 hover:text-white"><i class="fas fa-clipboard-list w-5"></i><span class="sidebar-label">Kelola Izin</span></button>';
+    html += '<button onclick="showPengumumanModal()" class="nav-item w-full flex items-center gap-3 p-3 rounded-xl text-gray-300 hover:text-white"><i class="fas fa-bullhorn w-5"></i><span class="sidebar-label">Buat Pengumuman</span></button>';
+    html += '<button onclick="loadScanAbsensi()" class="nav-item w-full flex items-center gap-3 p-3 rounded-xl text-gray-300 hover:text-white"><i class="fas fa-qrcode w-5"></i><span class="sidebar-label">Scan QR</span></button>';
+    loadAdminDashboard();
+  } else if (currentUser.role === 'guru') {
+    html = '<button onclick="loadGuruDashboard()" class="nav-item w-full flex items-center gap-3 p-3 rounded-xl text-gray-300 hover:text-white"><i class="fas fa-home w-5"></i><span class="sidebar-label">Dashboard</span></button>';
+    html += '<button onclick="loadMonitoring()" class="nav-item w-full flex items-center gap-3 p-3 rounded-xl text-gray-300 hover:text-white"><i class="fas fa-eye w-5"></i><span class="sidebar-label">Monitoring</span></button>';
+    html += '<button onclick="loadScanAbsensi()" class="nav-item w-full flex items-center gap-3 p-3 rounded-xl text-gray-300 hover:text-white"><i class="fas fa-qrcode w-5"></i><span class="sidebar-label">Scan QR</span></button>';
+    loadGuruDashboard();
+  } else {
+    html = '<button onclick="loadSiswaDashboard()" class="nav-item w-full flex items-center gap-3 p-3 rounded-xl text-gray-300 hover:text-white"><i class="fas fa-home w-5"></i><span class="sidebar-label">Dashboard</span></button>';
+    html += '<button onclick="loadQRCodeSiswa()" class="nav-item w-full flex items-center gap-3 p-3 rounded-xl text-gray-300 hover:text-white"><i class="fas fa-id-card w-5"></i><span class="sidebar-label">Kartu Digital</span></button>';
+    loadSiswaDashboard();
+  }
+  menu.innerHTML = html;
+  loadNotifications();
+  notificationInterval = setInterval(loadNotifications, 30000);
+  document.getElementById('logoutButton').onclick = (e) => { e.preventDefault(); logout(); };
+}
+
+// ======================= DASHBOARD ADMIN =======================
+async function loadAdminDashboard() {
+  document.getElementById('pageTitle').innerHTML = 'Dashboard Admin';
+  showLoading();
+  await loadSiswaFromAPI();
+  const pendingIzin = localData.izin.filter(i => i.status === 'pending').length;
+  const today = new Date().toISOString().split('T')[0];
+  const absenToday = localData.absensi.filter(a => a.tanggal === today).length;
+  const totalGuru = localData.guru.length;
+  hideLoading();
+  
+  document.getElementById('mainContentArea').innerHTML = `
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+      <div class="bg-white p-4 rounded-xl shadow-sm border-l-4 border-indigo-500"><p class="text-gray-400 text-xs">Total Siswa</p><p class="text-2xl font-bold">${siswaData.length}</p></div>
+      <div class="bg-white p-4 rounded-xl shadow-sm border-l-4 border-yellow-500"><p class="text-gray-400 text-xs">Izin Menunggu</p><p class="text-2xl font-bold text-yellow-600">${pendingIzin}</p></div>
+      <div class="bg-white p-4 rounded-xl shadow-sm border-l-4 border-green-500"><p class="text-gray-400 text-xs">Absen Hari Ini</p><p class="text-2xl font-bold text-green-600">${absenToday}</p></div>
+      <div class="bg-white p-4 rounded-xl shadow-sm border-l-4 border-blue-500"><p class="text-gray-400 text-xs">Total Guru</p><p class="text-2xl font-bold text-blue-600">${totalGuru}</p></div>
+    </div>
+    <div class="bg-white rounded-xl p-4 shadow-sm mb-6"><canvas id="adminChart" height="200"></canvas></div>
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <button onclick="loadDataSiswa()" class="bg-indigo-50 p-4 rounded-xl text-center hover:bg-indigo-100"><i class="fas fa-users text-2xl mb-2 block text-indigo-600"></i><span class="text-xs">Data Siswa</span></button>
+      <button onclick="loadKelolaAbsensi()" class="bg-green-50 p-4 rounded-xl text-center hover:bg-green-100"><i class="fas fa-clipboard-list text-2xl mb-2 block text-green-600"></i><span class="text-xs">Kelola Absen</span></button>
+      <button onclick="loadRekapAbsensi()" class="bg-blue-50 p-4 rounded-xl text-center hover:bg-blue-100"><i class="fas fa-file-excel text-2xl mb-2 block text-blue-600"></i><span class="text-xs">Rekap Absen</span></button>
+      <button onclick="loadScanAbsensi()" class="bg-purple-50 p-4 rounded-xl text-center hover:bg-purple-100"><i class="fas fa-qrcode text-2xl mb-2 block text-purple-600"></i><span class="text-xs">Scan QR</span></button>
+    </div>
+  `;
+  
+  const ctx = document.getElementById('adminChart');
+  if (ctx) {
+    const totalHadir = localData.absensi.filter(a => a.status === 'Hadir').length;
+    const totalSakit = localData.absensi.filter(a => a.status === 'Sakit').length;
+    const totalIzin = localData.absensi.filter(a => a.status === 'Izin').length;
+    const totalAlpa = localData.absensi.filter(a => a.status === 'Alpa').length;
+    if (adminChart) adminChart.destroy();
+    adminChart = new Chart(ctx, { type: 'bar', data: { labels: ['Hadir', 'Sakit', 'Izin', 'Alpa'], datasets: [{ label: 'Jumlah', data: [totalHadir, totalSakit, totalIzin, totalAlpa], backgroundColor: ['#10B981', '#F59E0B', '#3B82F6', '#EF4444'], borderRadius: 8 }] }, options: { responsive: true } });
+  }
+}
+
+// ======================= DATA SISWA =======================
+async function loadDataSiswa() {
+  document.getElementById('pageTitle').innerHTML = 'Data Siswa (Dari API)';
+  showLoading();
+  await loadSiswaFromAPI();
+  hideLoading();
+  
+  if (!siswaData || siswaData.length === 0) {
     document.getElementById('mainContentArea').innerHTML = `
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-        <div class="bg-gradient-to-r from-indigo-500 to-indigo-600 rounded-xl p-5 text-white">
-          <div class="flex justify-between items-start">
-            <div>
-              <p class="opacity-80 text-sm">Hari Ini</p>
-              <p class="text-2xl font-bold">${currentDateFormatted}</p>
-              <p class="text-3xl font-mono mt-2">${currentTime}</p>
-            </div>
-            <i class="fas fa-calendar-day text-4xl opacity-50"></i>
-          </div>
-        </div>
-        <div class="bg-white rounded-xl p-5 shadow-sm">
-          <div class="flex justify-between mb-3"><span class="text-gray-500">👤 Nama</span><span class="font-semibold">${currentUser.nama}</span></div>
-          <div class="flex justify-between mb-3"><span class="text-gray-500">🆔 NISN</span><span class="font-semibold">${currentUser.nisn}</span></div>
-          <div class="flex justify-between mb-3"><span class="text-gray-500">📚 Kelas</span><span class="font-semibold">${currentUser.kelas || '-'}</span></div>
-          <div class="flex justify-between pt-2 border-t">
-            <span class="text-gray-500">⏰ Scan Masuk</span>
-            <span class="font-semibold ${absenToday?.jam ? 'text-green-600' : 'text-red-500'}">${absenToday?.jam || 'Belum'}</span>
-          </div>
-          <div class="flex justify-between mt-2">
-            <span class="text-gray-500">🏠 Status Hari Ini</span>
-            <span class="font-semibold ${absenToday?.status === 'Hadir' ? 'text-green-600' : 'text-red-500'}">${absenToday?.status || 'Belum Absen'}</span>
-          </div>
-        </div>
+      <div class="bg-white rounded-xl p-8 text-center">
+        <i class="fas fa-database text-4xl text-gray-400 mb-3"></i>
+        <p class="text-gray-500">Belum ada data siswa dari API</p>
+        <button onclick="loadDataSiswa()" class="mt-4 bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm">Refresh Data</button>
       </div>
-      <div class="bg-white rounded-xl p-5 shadow-sm mb-6">
-        <div class="flex justify-between items-center mb-4">
-          <h3 class="font-semibold"><i class="fas fa-clipboard-list mr-2 text-indigo-600"></i>Riwayat Izin Saya</h3>
-          <button onclick="showAjukanIzin()" class="bg-indigo-600 text-white px-3 py-1 rounded-lg text-sm">Ajukan Izin</button>
-        </div>
-        <div class="space-y-2 max-h-64 overflow-y-auto">
-          ${myIzin.length === 0 ? '<p class="text-gray-400 text-center py-4">Belum ada pengajuan izin</p>' : myIzin.map(i => `
-            <div class="bg-gray-50 rounded-lg p-3 flex justify-between items-center">
-              <div><p class="font-medium">${i.tanggal}</p><p class="text-xs text-gray-500">${i.keterangan}</p></div>
-              <span class="text-xs px-2 py-1 rounded-full ${statusClass[i.status]}">${statusText[i.status]}</span>
-            </div>
-          `).join('')}
+    `;
+    return;
+  }
+  
+  document.getElementById('mainContentArea').innerHTML = `
+    <div class="bg-white rounded-xl p-4 shadow-sm mb-4">
+      <div class="flex justify-between items-center flex-wrap gap-3">
+        <input type="text" id="searchSiswa" placeholder="Cari nama atau NISN..." class="flex-1 px-3 py-2 border rounded-lg text-sm">
+        <span class="text-sm text-gray-500 bg-gray-100 px-3 py-2 rounded-lg"><i class="fas fa-database mr-1"></i> ${siswaData.length} siswa dari API</span>
+        <button onclick="loadDataSiswa()" class="bg-indigo-100 text-indigo-700 px-3 py-2 rounded-lg text-sm"><i class="fas fa-sync-alt mr-1"></i> Refresh</button>
+      </div>
+    </div>
+    <div class="bg-white rounded-xl shadow-sm overflow-hidden">
+      <div class="overflow-x-auto"><table class="w-full text-sm"><thead class="bg-gray-50"><tr><th class="p-3 text-left">NISN</th><th class="p-3 text-left">Nama</th><th class="p-3 text-left">Kelas</th><th class="p-3 text-center">Status</th></tr></thead><tbody id="siswaTable">${siswaData.map(s => `<tr class="border-t hover:bg-gray-50"><td class="p-3 font-mono">${s.nisn}</td><td class="p-3 font-medium">${s.nama}</td><td class="p-3">${s.kelas || '-'}</td><td class="p-3 text-center"><span class="px-2 py-1 rounded-full text-xs bg-green-100 text-green-700">Aktif</span></td></tr>`).join('')}</tbody>}</div>
+    </div>
+  `;
+  document.getElementById('searchSiswa')?.addEventListener('keyup', (e) => {
+    const val = e.target.value.toLowerCase();
+    document.querySelectorAll('#siswaTable tr').forEach(r => { r.style.display = r.innerText.toLowerCase().includes(val) ? '' : 'none'; });
+  });
+}
+
+// ======================= DASHBOARD SISWA =======================
+async function loadSiswaDashboard() {
+  document.getElementById('pageTitle').innerHTML = 'Dashboard Siswa';
+  showLoading();
+  await loadSiswaFromAPI();
+  document.getElementById('navUserName').innerHTML = currentUser.nama;
+  
+  const today = new Date().toISOString().split('T')[0];
+  const absenToday = localData.absensi.find(a => a.nisn == currentUser.nisn && a.tanggal === today);
+  const myIzin = localData.izin.filter(i => i.nisn == currentUser.nisn);
+  const pengumuman = localData.pengumuman;
+  const now = new Date();
+  const currentTime = now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  const currentDateFormatted = now.toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+  hideLoading();
+  
+  const statusClass = { pending: 'bg-yellow-100 text-yellow-700', disetujui: 'bg-green-100 text-green-700', ditolak: 'bg-red-100 text-red-700' };
+  const statusText = { pending: 'Menunggu', disetujui: 'Disetujui', ditolak: 'Ditolak' };
+  
+  document.getElementById('mainContentArea').innerHTML = `
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+      <div class="bg-gradient-to-r from-indigo-500 to-indigo-600 rounded-xl p-5 text-white">
+        <div class="flex justify-between items-start">
+          <div>
+            <p class="opacity-80 text-sm">Hari Ini</p>
+            <p class="text-2xl font-bold">${currentDateFormatted}</p>
+            <p class="text-3xl font-mono mt-2">${currentTime}</p>
+          </div>
+          <i class="fas fa-calendar-day text-4xl opacity-50"></i>
         </div>
       </div>
       <div class="bg-white rounded-xl p-5 shadow-sm">
-        <h3 class="font-semibold mb-3"><i class="fas fa-bullhorn mr-2 text-indigo-600"></i>Pengumuman</h3>
-        <div class="space-y-2 max-h-48 overflow-y-auto">
-          ${pengumuman.length === 0 ? '<p class="text-gray-400 text-center py-4">Belum ada pengumuman</p>' : pengumuman.map(p => `
-            <div class="bg-blue-50 rounded-lg p-3">
-              <p class="font-semibold text-sm">📢 ${p.judul}</p>
-              <p class="text-xs text-gray-600 mt-1">${p.isi}</p>
-              <p class="text-[10px] text-gray-400 mt-1">${new Date(p.createdAt).toLocaleDateString()}</p>
-            </div>
-          `).join('')}
-        </div>
+        <div class="flex justify-between mb-3"><span class="text-gray-500">👤 Nama</span><span class="font-semibold">${currentUser.nama}</span></div>
+        <div class="flex justify-between mb-3"><span class="text-gray-500">🆔 NISN</span><span class="font-semibold">${currentUser.nisn}</span></div>
+        <div class="flex justify-between mb-3"><span class="text-gray-500">📚 Kelas</span><span class="font-semibold">${currentUser.kelas || '-'}</span></div>
+        <div class="flex justify-between pt-2 border-t"><span class="text-gray-500">⏰ Scan Masuk</span><span class="font-semibold ${absenToday?.jamDatang ? 'text-green-600' : 'text-red-500'}">${absenToday?.jamDatang || 'Belum'}</span></div>
+        <div class="flex justify-between mt-2"><span class="text-gray-500">🏠 Status Hari Ini</span><span class="font-semibold ${absenToday?.status === 'Hadir' ? 'text-green-600' : 'text-red-500'}">${absenToday?.status || 'Belum Absen'}</span></div>
       </div>
-    `;
-  }
-  
-  // ======================= SCAN QR ABSENSI (DIPERBAIKI) =======================
-  async function loadScanAbsensi() {
-    document.getElementById('pageTitle').innerHTML = 'Scan QR Absensi';
-    document.getElementById('mainContentArea').innerHTML = `
-      <div class="bg-white rounded-xl p-5 shadow-sm max-w-2xl mx-auto">
-        <div class="mb-4 flex gap-3">
-          <button onclick="setScanMode('masuk')" id="btnModeMasuk" class="flex-1 py-2 rounded-lg text-white font-semibold bg-indigo-600">Absen Masuk</button>
-          <button onclick="setScanMode('pulang')" id="btnModePulang" class="flex-1 py-2 rounded-lg font-semibold bg-gray-200 text-gray-600">Absen Pulang</button>
-        </div>
-        <div id="qr-reader" style="min-height: 300px;"></div>
-        <p id="scanStatus" class="text-center text-sm text-gray-500 mt-3">Siap scan QR Code</p>
-        <button onclick="manualInputNISN()" class="mt-3 w-full bg-gray-100 py-2 rounded-lg">Input Manual NISN</button>
+    </div>
+    <div class="bg-white rounded-xl p-5 shadow-sm mb-6">
+      <div class="flex justify-between items-center mb-4"><h3 class="font-semibold"><i class="fas fa-clipboard-list mr-2 text-indigo-600"></i>Riwayat Izin Saya</h3><button onclick="showAjukanIzin()" class="bg-indigo-600 text-white px-3 py-1 rounded-lg text-sm">Ajukan Izin</button></div>
+      <div class="space-y-2 max-h-64 overflow-y-auto">${myIzin.length === 0 ? '<p class="text-gray-400 text-center py-4">Belum ada pengajuan izin</p>' : myIzin.map(i => `<div class="bg-gray-50 rounded-lg p-3 flex justify-between items-center"><div><p class="font-medium">${i.tanggal}</p><p class="text-xs text-gray-500">${i.keterangan}</p></div><span class="text-xs px-2 py-1 rounded-full ${statusClass[i.status]}">${statusText[i.status]}</span></div>`).join('')}</div>
+    </div>
+    <div class="bg-white rounded-xl p-5 shadow-sm"><h3 class="font-semibold mb-3"><i class="fas fa-bullhorn mr-2 text-indigo-600"></i>Pengumuman</h3><div class="space-y-2 max-h-48 overflow-y-auto">${pengumuman.length === 0 ? '<p class="text-gray-400 text-center py-4">Belum ada pengumuman</p>' : pengumuman.map(p => `<div class="bg-blue-50 rounded-lg p-3"><p class="font-semibold text-sm">📢 ${p.judul}</p><p class="text-xs text-gray-600 mt-1">${p.isi}</p><p class="text-[10px] text-gray-400 mt-1">${new Date(p.createdAt).toLocaleDateString()}</p></div>`).join('')}</div></div>
+  `;
+}
+
+// ======================= SCAN QR ABSENSI =======================
+async function loadScanAbsensi() {
+  document.getElementById('pageTitle').innerHTML = 'Scan QR Absensi';
+  document.getElementById('mainContentArea').innerHTML = `
+    <div class="bg-white rounded-xl p-5 shadow-sm max-w-2xl mx-auto">
+      <div class="mb-4 flex gap-3">
+        <button onclick="setScanMode('masuk')" id="btnModeMasuk" class="flex-1 py-2 rounded-lg text-white font-semibold bg-indigo-600">Absen Masuk</button>
+        <button onclick="setScanMode('pulang')" id="btnModePulang" class="flex-1 py-2 rounded-lg font-semibold bg-gray-200 text-gray-600">Absen Pulang</button>
       </div>
-    `;
-    window.currentScanMode = 'masuk';
-    startScanner();
+      <div id="qr-reader" style="min-height: 300px;"></div>
+      <p id="scanStatus" class="text-center text-sm text-gray-500 mt-3">Siap scan QR Code</p>
+      <button onclick="manualInputNISN()" class="mt-3 w-full bg-gray-100 py-2 rounded-lg">Input Manual NISN</button>
+    </div>
+  `;
+  window.currentScanMode = 'masuk';
+  startScanner();
+}
+
+function setScanMode(mode) {
+  window.currentScanMode = mode;
+  const btnM = document.getElementById('btnModeMasuk'), btnP = document.getElementById('btnModePulang');
+  if (mode === 'masuk') {
+    if (btnM) btnM.className = 'flex-1 py-2 rounded-lg bg-indigo-600 text-white font-semibold';
+    if (btnP) btnP.className = 'flex-1 py-2 rounded-lg bg-gray-200 text-gray-600 font-semibold';
+  } else {
+    if (btnP) btnP.className = 'flex-1 py-2 rounded-lg bg-indigo-600 text-white font-semibold';
+    if (btnM) btnM.className = 'flex-1 py-2 rounded-lg bg-gray-200 text-gray-600 font-semibold';
+  }
+  document.getElementById('scanStatus').innerHTML = `Mode: ${mode === 'masuk' ? 'Absen Masuk' : 'Absen Pulang'}`;
+}
+
+function startScanner() {
+  if (html5QrCode) html5QrCode.stop().catch(()=>{});
+  try {
+    html5QrCode = new Html5Qrcode("qr-reader");
+    html5QrCode.start({ facingMode: "environment" }, { fps: 10, qrbox: 300 }, (decoded) => {
+      html5QrCode.stop();
+      processScan(decoded);
+      setTimeout(startScanner, 1500);
+    }, (err)=>{}); 
+  } catch(e) { console.log('Scanner error:', e); }
+}
+
+async function processScan(nisn) {
+  showLoading();
+  await loadSiswaFromAPI();
+  const student = siswaData.find(s => s.nisn == nisn);
+  if (!student) {
+    hideLoading();
+    Swal.fire('Error', 'NISN tidak ditemukan', 'error');
+    return;
   }
   
-  function setScanMode(mode) {
-    window.currentScanMode = mode;
-    const btnM = document.getElementById('btnModeMasuk'), btnP = document.getElementById('btnModePulang');
-    if (mode === 'masuk') {
-      if (btnM) btnM.className = 'flex-1 py-2 rounded-lg bg-indigo-600 text-white font-semibold';
-      if (btnP) btnP.className = 'flex-1 py-2 rounded-lg bg-gray-200 text-gray-600 font-semibold';
-    } else {
-      if (btnP) btnP.className = 'flex-1 py-2 rounded-lg bg-indigo-600 text-white font-semibold';
-      if (btnM) btnM.className = 'flex-1 py-2 rounded-lg bg-gray-200 text-gray-600 font-semibold';
-    }
-    document.getElementById('scanStatus').innerHTML = `Mode: ${mode === 'masuk' ? 'Absen Masuk' : 'Absen Pulang'}`;
-  }
+  const today = new Date().toISOString().split('T')[0];
+  const jam = new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  const existingAbsen = localData.absensi.find(a => a.nisn == nisn && a.tanggal === today);
   
-  function startScanner() {
-    if (html5QrCode) html5QrCode.stop().catch(()=>{});
-    try {
-      html5QrCode = new Html5Qrcode("qr-reader");
-      html5QrCode.start({ facingMode: "environment" }, { fps: 10, qrbox: 300 }, (decoded) => {
-        html5QrCode.stop();
-        processScan(decoded);
-        setTimeout(startScanner, 1500);
-      }, (err)=>{});
-            }, (err)=>{}); 
-    } catch(e) { console.log('Scanner error:', e); }
-  }
-  
-  async function processScan(nisn) {
-    showLoading();
-    
-    // Ambil data siswa dari cache atau API
-    await loadSiswaFromAPI();
-    const student = siswaData.find(s => s.nisn == nisn);
-    
-    if (!student) {
+  if (window.currentScanMode === 'masuk') {
+    if (existingAbsen && existingAbsen.jamDatang) {
       hideLoading();
-      Swal.fire('Error', 'NISN tidak ditemukan', 'error');
+      Swal.fire('Info', `${student.nama} sudah melakukan absen masuk hari ini pada pukul ${existingAbsen.jamDatang}`, 'info');
       return;
     }
     
-    const today = new Date().toISOString().split('T')[0];
-    const jam = new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-    
-    // Cek apakah sudah absen hari ini
-    const existingAbsen = localData.absensi.find(a => a.nisn == nisn && a.tanggal === today);
-    
-    if (window.currentScanMode === 'masuk') {
-      if (existingAbsen && existingAbsen.jamDatang) {
-        hideLoading();
-        Swal.fire('Info', `${student.nama} sudah melakukan absen masuk hari ini pada pukul ${existingAbsen.jamDatang}`, 'info');
-        return;
-      }
-      
-      if (existingAbsen) {
-        existingAbsen.jamDatang = jam;
-        existingAbsen.status = 'Hadir';
-      } else {
-        localData.absensi.push({
-          nisn, nama: student.nama, tanggal: today,
-          jamDatang: jam, jamPulang: null, status: 'Hadir',
-          petugas: currentUser.nama, createdAt: new Date().toISOString()
-        });
-      }
-      saveLocalData();
-      
-      // Kirim notifikasi ke admin
-      addNotification('Absen Masuk', `${student.nama} (${nisn}) melakukan absen masuk pukul ${jam}`, 'admin');
-      
-      // Kirim notifikasi ke siswa
-      if (currentUser.role === 'siswa') {
-        addNotification('Absen Berhasil', `✅ Absen masuk Anda pukul ${jam} telah tercatat`, 'siswa', currentUser.nisn);
-      } else {
-        // Jika guru yang scan untuk siswa
-        addNotification('Absen Berhasil', `✅ Absen masuk Anda pukul ${jam} telah tercatat oleh ${currentUser.nama}`, 'siswa', nisn);
-      }
-      
-      hideLoading();
-      showToast('Berhasil', `Absen masuk untuk ${student.nama} pukul ${jam}`, 'success');
-      
-    } else if (window.currentScanMode === 'pulang') {
-      if (!existingAbsen || !existingAbsen.jamDatang) {
-        hideLoading();
-        Swal.fire('Info', `${student.nama} belum melakukan absen masuk hari ini`, 'warning');
-        return;
-      }
-      
-      if (existingAbsen.jamPulang) {
-        hideLoading();
-        Swal.fire('Info', `${student.nama} sudah melakukan absen pulang hari ini pada pukul ${existingAbsen.jamPulang}`, 'info');
-        return;
-      }
-      
-      existingAbsen.jamPulang = jam;
-      saveLocalData();
-      
-      // Kirim notifikasi ke admin
-      addNotification('Absen Pulang', `${student.nama} (${nisn}) melakukan absen pulang pukul ${jam}`, 'admin');
-      
-      // Kirim notifikasi ke siswa
-      if (currentUser.role === 'siswa') {
-        addNotification('Absen Pulang Berhasil', `✅ Absen pulang Anda pukul ${jam} telah tercatat`, 'siswa', currentUser.nisn);
-      } else {
-        addNotification('Absen Pulang Berhasil', `✅ Absen pulang Anda pukul ${jam} telah tercatat oleh ${currentUser.nama}`, 'siswa', nisn);
-      }
-      
-      hideLoading();
-      showToast('Berhasil', `Absen pulang untuk ${student.nama} pukul ${jam}`, 'success');
+    if (existingAbsen) {
+      existingAbsen.jamDatang = jam;
+      existingAbsen.status = 'Hadir';
+    } else {
+      localData.absensi.push({
+        nisn, nama: student.nama, tanggal: today,
+        jamDatang: jam, jamPulang: null, status: 'Hadir',
+        petugas: currentUser.nama, createdAt: new Date().toISOString()
+      });
     }
-    
-    // Refresh dashboard yang sedang aktif
-    const currentPage = document.getElementById('pageTitle')?.innerText;
-    if (currentPage === 'Dashboard Siswa') {
-      await loadSiswaDashboard();
-    } else if (currentPage === 'Dashboard Admin') {
-      await loadAdminDashboard();
-    } else if (currentPage === 'Kelola Absensi') {
-      await loadKelolaAbsensi();
-    } else if (currentPage === 'Monitoring Kehadiran') {
-      await loadMonitoring();
-    }
-    
-    // Refresh notifikasi
-    loadNotifications();
-  }
-  
-  function manualInputNISN() {
-    Swal.fire({
-      title: 'Input NISN',
-      input: 'text',
-      inputPlaceholder: 'Masukkan NISN siswa',
-      showCancelButton: true,
-      confirmButtonText: 'Proses'
-    }).then((res) => {
-      if (res.isConfirmed) processScan(res.value);
-    });
-  }
-  
-  // ======================= KELOLA ABSENSI =======================
-  async function loadKelolaAbsensi() {
-    document.getElementById('pageTitle').innerHTML = 'Kelola Absensi';
-    showLoading();
-    await loadSiswaFromAPI();
-    const today = new Date().toISOString().split('T')[0];
-    const todayAbsen = localData.absensi.filter(a => a.tanggal === today);
+    saveLocalData();
+    addNotification('Absen Masuk', `${student.nama} (${nisn}) melakukan absen masuk pukul ${jam}`, 'admin');
+    addNotification('Absen Berhasil', `✅ Absen masuk Anda pukul ${jam} telah tercatat`, 'siswa', nisn);
     hideLoading();
+    showToast('Berhasil', `Absen masuk untuk ${student.nama} pukul ${jam}`, 'success');
     
-    document.getElementById('mainContentArea').innerHTML = `
-      <div class="bg-white rounded-xl p-4 shadow-sm mb-4 flex justify-between items-center flex-wrap gap-3">
-        <h3 class="font-semibold"><i class="fas fa-calendar-day mr-2 text-indigo-600"></i>Absensi Hari Ini: ${new Date().toLocaleDateString('id-ID')}</h3>
-        <div class="flex gap-2">
-          <button onclick="exportTodayAbsen()" class="bg-green-600 text-white px-4 py-2 rounded-lg text-sm"><i class="fas fa-download mr-1"></i> Export Hari Ini</button>
-          <button onclick="loadKelolaAbsensi()" class="bg-gray-500 text-white px-4 py-2 rounded-lg text-sm"><i class="fas fa-sync-alt mr-1"></i> Refresh</button>
-        </div>
-      </div>
-      <div class="bg-white rounded-xl shadow-sm overflow-hidden">
-        <div class="overflow-x-auto">
-          <table class="w-full text-sm">
-            <thead class="bg-gray-50">
-              <tr><th class="p-3">NISN</th><th class="p-3">Nama</th><th class="p-3">Kelas</th><th class="p-3 text-center">Status</th><th class="p-3 text-center">Jam Datang</th><th class="p-3 text-center">Jam Pulang</th><th class="p-3 text-center">Aksi</th></tr>
-            </thead>
-            <tbody>
-              ${siswaData.map(s => {
-                const absen = todayAbsen.find(a => a.nisn == s.nisn);
-                return `
-                  <tr class="border-t hover:bg-gray-50">
-                    <td class="p-3">${s.nisn}</td>
-                    <td class="p-3 font-medium">${s.nama}</td>
-                    <td class="p-3">${s.kelas || '-'}</td>
-                    <td class="p-3 text-center"><span class="px-2 py-1 rounded-full text-xs ${getStatusClass(absen?.status || 'Belum')}">${absen?.status || 'Belum'}</span></td>
-                    <td class="p-3 text-center">${absen?.jamDatang || '-'}</td>
-                    <td class="p-3 text-center">${absen?.jamPulang || '-'}</td>
-                    <td class="p-3 text-center">
-                      <button onclick="updateAbsenStatus('${s.nisn}','${s.nama}','${absen?.status || 'Belum'}')" class="bg-indigo-100 text-indigo-700 px-3 py-1 rounded-lg text-xs hover:bg-indigo-200">
-                        <i class="fas fa-edit mr-1"></i>Update
-                      </button>
-                    </td>
-                  </table>
-                `;
-              }).join('')}
-            </tbody>
-          </table>
-        </div>
-      </div>
-    `;
-  }
-  
-  function getStatusClass(status) {
-    const classes = { 
-      Hadir: 'bg-green-100 text-green-700', 
-      Sakit: 'bg-yellow-100 text-yellow-700', 
-      Izin: 'bg-blue-100 text-blue-700', 
-      Alpa: 'bg-red-100 text-red-700', 
-      Belum: 'bg-gray-100 text-gray-600' 
-    };
-    return classes[status] || classes.Belum;
-  }
-  
-  function updateAbsenStatus(nisn, nama, currentStatus) {
-    const now = new Date();
-    const currentTime = now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-    
-    Swal.fire({
-      title: `Update Absen: ${nama}`,
-      html: `
-        <select id="newStatus" class="w-full p-2 border rounded-lg mb-3">
-          <option value="Hadir" ${currentStatus === 'Hadir' ? 'selected' : ''}>Hadir</option>
-          <option value="Sakit" ${currentStatus === 'Sakit' ? 'selected' : ''}>Sakit</option>
-          <option value="Izin" ${currentStatus === 'Izin' ? 'selected' : ''}>Izin</option>
-          <option value="Alpa" ${currentStatus === 'Alpa' ? 'selected' : ''}>Alpa</option>
-        </select>
-        <input type="time" id="jamDatang" class="w-full p-2 border rounded-lg mb-2" placeholder="Jam Datang" value="${currentTime}">
-        <input type="time" id="jamPulang" class="w-full p-2 border rounded-lg" placeholder="Jam Pulang" value="">
-      `,
-      confirmButtonText: 'Simpan',
-      preConfirm: () => ({
-        status: document.getElementById('newStatus').value,
-        jamDatang: document.getElementById('jamDatang').value,
-        jamPulang: document.getElementById('jamPulang').value
-      })
-    }).then((res) => {
-      if (res.isConfirmed) {
-        const today = new Date().toISOString().split('T')[0];
-        const idx = localData.absensi.findIndex(a => a.nisn == nisn && a.tanggal === today);
-        
-        if (idx !== -1) {
-          localData.absensi[idx] = {
-            ...localData.absensi[idx],
-            status: res.value.status,
-            jamDatang: res.value.jamDatang || localData.absensi[idx].jamDatang,
-            jamPulang: res.value.jamPulang || localData.absensi[idx].jamPulang,
-            updatedAt: new Date().toISOString()
-          };
-        } else {
-          localData.absensi.push({
-            nisn, nama, tanggal: today,
-            jamDatang: res.value.jamDatang,
-            jamPulang: res.value.jamPulang,
-            status: res.value.status,
-            petugas: currentUser.nama,
-            createdAt: new Date().toISOString()
-          });
-        }
-        
-        saveLocalData();
-        addNotification('Update Absen', `Status ${nama} diubah menjadi ${res.value.status} oleh ${currentUser.nama}`, 'admin');
-        addNotification('Status Absen', `Status absen Anda pada hari ini diubah menjadi ${res.value.status}`, 'siswa', nisn);
-        
-        showToast('Sukses', 'Status absen diupdate', 'success');
-        loadKelolaAbsensi();
-        
-        // Refresh dashboard siswa jika sedang aktif
-        if (currentUser.role === 'siswa') loadSiswaDashboard();
-      }
-    });
-  }
-  
-  function exportTodayAbsen() {
-    const today = new Date().toISOString().split('T')[0];
-    const todayAbsen = localData.absensi.filter(a => a.tanggal === today);
-    const exportData = siswaData.map(s => {
-      const absen = todayAbsen.find(a => a.nisn == s.nisn);
-      return {
-        NISN: s.nisn,
-        Nama: s.nama,
-        Kelas: s.kelas || '-',
-        Status: absen?.status || 'Belum',
-        'Jam Datang': absen?.jamDatang || '-',
-        'Jam Pulang': absen?.jamPulang || '-',
-        Petugas: absen?.petugas || '-'
-      };
-    });
-    const ws = XLSX.utils.json_to_sheet(exportData);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, `Absensi_${today}`);
-    XLSX.writeFile(wb, `absensi_${today}.xlsx`);
-    showToast('Sukses', 'File Excel berhasil diunduh', 'success');
-  }
-  
-  // ======================= REKAP ABSENSI =======================
-  function loadRekapAbsensi() {
-    document.getElementById('pageTitle').innerHTML = 'Rekap Absensi';
-    const today = new Date().toISOString().split('T')[0];
-    const startDate = new Date();
-    startDate.setDate(1);
-    
-    document.getElementById('mainContentArea').innerHTML = `
-      <div class="bg-white rounded-xl p-5 shadow-sm max-w-2xl mx-auto">
-        <h3 class="font-semibold text-lg mb-4"><i class="fas fa-chart-line mr-2 text-indigo-600"></i>Rekap Absensi</h3>
-        <div class="space-y-4">
-          <div>
-            <label class="block text-sm font-medium mb-1">Tanggal Mulai</label>
-            <input type="date" id="startDate" class="w-full p-2 border rounded-lg" value="${startDate.toISOString().split('T')[0]}">
-          </div>
-          <div>
-            <label class="block text-sm font-medium mb-1">Tanggal Akhir</label>
-            <input type="date" id="endDate" class="w-full p-2 border rounded-lg" value="${today}">
-          </div>
-          <div>
-            <label class="block text-sm font-medium mb-1">Pilih Kelas (Opsional)</label>
-            <select id="filterKelas" class="w-full p-2 border rounded-lg">
-              <option value="">Semua Kelas</option>
-              ${[...new Set(siswaData.map(s => s.kelas).filter(Boolean))].map(k => `<option value="${k}">${k}</option>`).join('')}
-            </select>
-          </div>
-          <button onclick="generateRekapExcel()" class="w-full bg-green-600 text-white py-2 rounded-lg font-semibold hover:bg-green-700 transition">
-            <i class="fas fa-file-excel mr-2"></i>Export ke Excel
-          </button>
-        </div>
-        <div class="mt-6 p-4 bg-gray-50 rounded-lg">
-          <p class="text-sm text-gray-600"><i class="fas fa-info-circle mr-2"></i>Rekap akan menampilkan data absensi per siswa dalam periode yang dipilih, termasuk total hadir, sakit, izin, dan alpa.</p>
-        </div>
-      </div>
-    `;
-  }
-  
-  function generateRekapExcel() {
-    const startDate = document.getElementById('startDate').value;
-    const endDate = document.getElementById('endDate').value;
-    const filterKelas = document.getElementById('filterKelas').value;
-    
-    if (!startDate || !endDate) {
-      showToast('Error', 'Pilih tanggal mulai dan akhir', 'error');
+  } else if (window.currentScanMode === 'pulang') {
+    if (!existingAbsen || !existingAbsen.jamDatang) {
+      hideLoading();
+      Swal.fire('Info', `${student.nama} belum melakukan absen masuk hari ini`, 'warning');
       return;
     }
-    
-    let filteredAbsensi = localData.absensi.filter(a => a.tanggal >= startDate && a.tanggal <= endDate);
-    let filteredSiswa = siswaData;
-    if (filterKelas) filteredSiswa = filteredSiswa.filter(s => s.kelas === filterKelas);
-    
-    const rekapData = filteredSiswa.map(s => {
-      const absenSiswa = filteredAbsensi.filter(a => a.nisn == s.nisn);
-      return {
-        NISN: s.nisn,
-        Nama: s.nama,
-        Kelas: s.kelas || '-',
-        Hadir: absenSiswa.filter(a => a.status === 'Hadir').length,
-        Sakit: absenSiswa.filter(a => a.status === 'Sakit').length,
-        Izin: absenSiswa.filter(a => a.status === 'Izin').length,
-        Alpa: absenSiswa.filter(a => a.status === 'Alpa').length,
-        'Total Hari': absenSiswa.length
-      };
-    });
-    
-    const ws = XLSX.utils.json_to_sheet(rekapData);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, `Rekap_Absensi_${startDate}_sd_${endDate}`);
-    XLSX.writeFile(wb, `rekap_absensi_${startDate}_${endDate}.xlsx`);
-    showToast('Sukses', 'File rekap Excel berhasil diunduh', 'success');
-  }
-  
-  // ======================= DASHBOARD GURU =======================
-  async function loadGuruDashboard() {
-    document.getElementById('pageTitle').innerHTML = 'Dashboard Guru';
-    showLoading();
-    await loadSiswaFromAPI();
-    const today = new Date().toISOString().split('T')[0];
-    const hadirToday = localData.absensi.filter(a => a.tanggal === today && a.status === 'Hadir').length;
+    if (existingAbsen.jamPulang) {
+      hideLoading();
+      Swal.fire('Info', `${student.nama} sudah melakukan absen pulang hari ini pada pukul ${existingAbsen.jamPulang}`, 'info');
+      return;
+    }
+    existingAbsen.jamPulang = jam;
+    saveLocalData();
+    addNotification('Absen Pulang', `${student.nama} (${nisn}) melakukan absen pulang pukul ${jam}`, 'admin');
+    addNotification('Absen Pulang Berhasil', `✅ Absen pulang Anda pukul ${jam} telah tercatat`, 'siswa', nisn);
     hideLoading();
-    
-    document.getElementById('mainContentArea').innerHTML = `
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-        <div class="bg-white p-5 rounded-xl shadow-sm border-l-4 border-indigo-500">
-          <p class="text-gray-400 text-sm">Total Siswa</p>
-          <p class="text-3xl font-bold text-indigo-600">${siswaData.length}</p>
-        </div>
-        <div class="bg-white p-5 rounded-xl shadow-sm border-l-4 border-green-500">
-          <p class="text-gray-400 text-sm">Hadir Hari Ini</p>
-          <p class="text-3xl font-bold text-green-600">${hadirToday}</p>
-        </div>
-      </div>
-      <div class="grid grid-cols-2 gap-4">
-        <button onclick="loadMonitoring()" class="bg-indigo-600 text-white py-4 rounded-xl font-semibold hover:bg-indigo-700 transition">
-          <i class="fas fa-eye mr-2"></i> Monitoring
-        </button>
-        <button onclick="loadScanAbsensi()" class="bg-emerald-600 text-white py-4 rounded-xl font-semibold hover:bg-emerald-700 transition">
-          <i class="fas fa-qrcode mr-2"></i> Scan QR
-        </button>
-      </div>
-    `;
+    showToast('Berhasil', `Absen pulang untuk ${student.nama} pukul ${jam}`, 'success');
   }
   
-  // ======================= MONITORING =======================
-  async function loadMonitoring() {
-    document.getElementById('pageTitle').innerHTML = 'Monitoring Kehadiran';
-    showLoading();
-    await loadSiswaFromAPI();
-    const today = new Date().toISOString().split('T')[0];
-    const todayAbsen = localData.absensi.filter(a => a.tanggal === today);
-    hideLoading();
-    
-    document.getElementById('mainContentArea').innerHTML = `
-      <div class="bg-white rounded-xl p-4 shadow-sm mb-4">
-        <input type="text" id="searchMonitoring" placeholder="🔍 Cari nama atau NISN..." class="w-full px-4 py-2 border rounded-lg text-sm">
-      </div>
-      <div class="bg-white rounded-xl shadow-sm overflow-hidden">
-        <div class="overflow-x-auto">
-          <table class="w-full text-sm">
-            <thead class="bg-gray-50">
-              <tr><th class="p-3">NISN</th><th class="p-3">Nama</th><th class="p-3">Kelas</th><th class="p-3 text-center">Status</th><th class="p-3 text-center">Jam Datang</th><th class="p-3 text-center">Jam Pulang</th></tr>
-            </thead>
-            <tbody id="monitoringTable">
-              ${siswaData.map(s => {
-                const absen = todayAbsen.find(a => a.nisn == s.nisn);
-                return `
-                  <tr class="border-t hover:bg-gray-50">
-                    <td class="p-3">${s.nisn}</td>
-                    <td class="p-3 font-medium">${s.nama}</td>
-                    <td class="p-3">${s.kelas || '-'}</td>
-                    <td class="p-3 text-center"><span class="px-2 py-1 rounded-full text-xs ${getStatusClass(absen?.status || 'Belum')}">${absen?.status || 'Belum'}</span></td>
-                    <td class="p-3 text-center">${absen?.jamDatang || '-'}</td>
-                    <td class="p-3 text-center">${absen?.jamPulang || '-'}</td>
-                  </tr>
-                `;
-              }).join('')}
-            </tbody>
-          </table>
-        </div>
-      </div>
-    `;
-    
-    document.getElementById('searchMonitoring')?.addEventListener('keyup', (e) => {
-      const val = e.target.value.toLowerCase();
-      document.querySelectorAll('#monitoringTable tr').forEach(row => {
-        const text = row.innerText.toLowerCase();
-        row.style.display = text.includes(val) ? '' : 'none';
-      });
-    });
-  }
+  // Refresh halaman yang sedang aktif
+  const currentPage = document.getElementById('pageTitle')?.innerText;
+  if (currentPage === 'Dashboard Siswa') await loadSiswaDashboard();
+  else if (currentPage === 'Dashboard Admin') await loadAdminDashboard();
+  else if (currentPage === 'Kelola Absensi') await loadKelolaAbsensi();
+  else if (currentPage === 'Monitoring Kehadiran') await loadMonitoring();
   
-  // ======================= DATA GURU =======================
-  function loadDataGuru() {
-    document.getElementById('pageTitle').innerHTML = 'Data Guru';
-    document.getElementById('mainContentArea').innerHTML = `
-      <div class="bg-white rounded-xl p-4 shadow-sm mb-4 flex gap-3 flex-wrap">
-        <button onclick="showTambahGuru()" class="bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm"><i class="fas fa-plus mr-1"></i> Tambah Guru</button>
-        <input type="text" id="searchGuru" placeholder="🔍 Cari..." class="flex-1 px-3 py-2 border rounded-lg text-sm">
-      </div>
-      <div class="bg-white rounded-xl shadow-sm overflow-hidden">
-        <div class="overflow-x-auto">
-          <table class="w-full text-sm">
-            <thead class="bg-gray-50">
-              <tr><th class="p-3">Username</th><th class="p-3">Nama</th><th class="p-3">Kelas</th><th class="p-3 text-center">Aksi</th></tr>
-            </thead>
-            <tbody id="guruTable">
-              ${localData.guru.map(g => `
-                <tr class="border-t">
-                  <td class="p-3">${g.username}</td>
-                  <td class="p-3 font-medium">${g.nama}</td>
-                  <td class="p-3">${g.kelas || '-'}</td>
-                  <td class="p-3 text-center"><button onclick="hapusGuru('${g.username}')" class="text-red-600 hover:text-red-800"><i class="fas fa-trash"></i></button></td>
-                </tr>
-              `).join('')}
-            </tbody>
-          </table>
-        </div>
-      </div>
-    `;
-    
-    document.getElementById('searchGuru')?.addEventListener('keyup', (e) => {
-      const val = e.target.value.toLowerCase();
-      document.querySelectorAll('#guruTable tr').forEach(row => {
-        const text = row.innerText.toLowerCase();
-        row.style.display = text.includes(val) ? '' : 'none';
-      });
-    });
-  }
-  
-  function showTambahGuru() {
-    Swal.fire({
-      title: 'Tambah Guru',
-      html: `
-        <input id="username" class="swal2-input" placeholder="Username">
-        <input id="nama" class="swal2-input" placeholder="Nama Lengkap">
-        <input id="password" class="swal2-input" type="password" placeholder="Password">
-        <input id="kelas" class="swal2-input" placeholder="Kelas (opsional)">
-      `,
-      preConfirm: () => ({
-        username: document.getElementById('username').value,
-        nama: document.getElementById('nama').value,
-        password: document.getElementById('password').value,
-        kelas: document.getElementById('kelas').value
-      })
-    }).then((res) => {
-      if (res.isConfirmed) {
-        localData.guru.push({ ...res.value, id: Date.now(), createdAt: new Date().toISOString() });
-        saveLocalData();
-        showToast('Sukses', 'Guru ditambahkan', 'success');
-        loadDataGuru();
-      }
-    });
-  }
-  
-  function hapusGuru(username) {
-    Swal.fire({
-      title: 'Yakin hapus?',
-      text: `Guru dengan username "${username}" akan dihapus`,
-      icon: 'warning',
-      showCancelButton: true,
-      confirmButtonText: 'Ya, hapus',
-      cancelButtonText: 'Batal'
-    }).then((result) => {
-      if (result.isConfirmed) {
-        localData.guru = localData.guru.filter(g => g.username !== username);
-        saveLocalData();
-        showToast('Sukses', 'Guru dihapus', 'success');
-        loadDataGuru();
-      }
-    });
-  }
-  
-  // ======================= IZIN =======================
-  function loadIzinList() {
-    document.getElementById('pageTitle').innerHTML = 'Kelola Izin';
-    const statusClass = { pending: 'bg-yellow-100 text-yellow-700', disetujui: 'bg-green-100 text-green-700', ditolak: 'bg-red-100 text-red-700' };
-    const statusText = { pending: 'Menunggu', disetujui: 'Disetujui', ditolak: 'Ditolak' };
-    
-    document.getElementById('mainContentArea').innerHTML = `
-      <div class="bg-white rounded-xl shadow-sm overflow-hidden">
-        <div class="overflow-x-auto">
-          <table class="w-full text-sm">
-            <thead class="bg-gray-50">
-              <tr><th class="p-3">Tanggal</th><th class="p-3">NISN</th><th class="p-3">Nama</th><th class="p-3">Keterangan</th><th class="p-3 text-center">Status</th><th class="p-3 text-center">Aksi</th></tr>
-            </thead>
-            <tbody>
-              ${localData.izin.length === 0 ? `
-                <tr><td colspan="6" class="p-4 text-center text-gray-400">Belum ada pengajuan izin</td></tr>
-              ` : localData.izin.map(i => `
-                <tr class="border-t">
-                  <td class="p-3">${i.tanggal}</td>
-                  <td class="p-3">${i.nisn}</td>
-                  <td class="p-3 font-medium">${i.nama}</td>
-                  <td class="p-3">${i.keterangan}</td>
-                  <td class="p-3 text-center"><span class="px-2 py-1 rounded-full text-xs ${statusClass[i.status]}">${statusText[i.status]}</span></td>
-                  <td class="p-3 text-center">
-                    ${i.status === 'pending' ? `
-                      <button onclick="approveIzin('${i.id}','${i.nisn}','${i.tanggal}')" class="text-green-600 mr-2 hover:text-green-800"><i class="fas fa-check"></i></button>
-                      <button onclick="rejectIzin('${i.id}','${i.nisn}','${i.tanggal}')" class="text-red-600 hover:text-red-800"><i class="fas fa-times"></i></button>
-                    ` : '-'}
-                  </td>
-                </tr>
-              `).join('')}
-            </tbody>
-          </table>
-        </div>
-      </div>
-    `;
-  }
-  
-  function approveIzin(id, nisn, tanggal) {
-    const izin = localData.izin.find(i => i.id == id);
-    if (izin) {
-      izin.status = 'disetujui';
-      saveLocalData();
-      addNotification('Izin Disetujui', `✅ Izin Anda pada tanggal ${tanggal} telah disetujui`, 'siswa', nisn);
-      showToast('Sukses', 'Izin disetujui', 'success');
-      loadIzinList();
-    }
-  }
-  
-  function rejectIzin(id, nisn, tanggal) {
-    const izin = localData.izin.find(i => i.id == id);
-    if (izin) {
-      izin.status = 'ditolak';
-      saveLocalData();
-      addNotification('Izin Ditolak', `❌ Izin Anda pada tanggal ${tanggal} ditolak`, 'siswa', nisn);
-      showToast('Sukses', 'Izin ditolak', 'success');
-      loadIzinList();
-    }
-  }
-  
-  function showAjukanIzin() {
-    Swal.fire({
-      title: 'Ajukan Izin',
-      html: `
-        <input type="date" id="tanggal" class="swal2-input">
-        <textarea id="alasan" class="swal2-textarea" placeholder="Alasan izin/sakit"></textarea>
-      `,
-      confirmButtonText: 'Ajukan',
-      preConfirm: () => ({
-        tanggal: document.getElementById('tanggal').value,
-        keterangan: document.getElementById('alasan').value
-      })
-    }).then((res) => {
-      if (res.isConfirmed && res.value.tanggal && res.value.keterangan) {
-        localData.izin.push({
-          id: Date.now(),
-          nisn: currentUser.nisn,
-          nama: currentUser.nama,
-          tanggal: res.value.tanggal,
-          keterangan: res.value.keterangan,
-          status: 'pending',
-          createdAt: new Date().toISOString()
-        });
-        saveLocalData();
-        addNotification('Izin Baru', `${currentUser.nama} mengajukan izin pada ${res.value.tanggal}`, 'admin');
-        showToast('Berhasil', 'Izin diajukan', 'success');
-        loadSiswaDashboard();
-      } else {
-        showToast('Error', 'Tanggal dan alasan harus diisi', 'error');
-      }
-    });
-  }
-  
-  // ======================= HARI LIBUR =======================
-  function loadKelolaLibur() {
-    document.getElementById('pageTitle').innerHTML = 'Hari Libur';
-    document.getElementById('mainContentArea').innerHTML = `
-      <div class="bg-white rounded-xl p-4 shadow-sm mb-4">
-        <button onclick="showTambahLibur()" class="bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm"><i class="fas fa-plus mr-1"></i> Tambah Libur</button>
-      </div>
-      <div class="bg-white rounded-xl shadow-sm overflow-hidden">
-        <div class="overflow-x-auto">
-          <table class="w-full text-sm">
-            <thead class="bg-gray-50">
-              <tr><th class="p-3">Tanggal</th><th class="p-3">Keterangan</th><th class="p-3 text-center">Aksi</th></tr>
-            </thead>
-            <tbody>
-              ${localData.libur.map(l => `
-                <tr class="border-t">
-                  <td class="p-3">${l.tanggal}</td>
-                  <td class="p-3">${l.keterangan}</td>
-                  <td class="p-3 text-center"><button onclick="hapusLibur('${l.tanggal}')" class="text-red-600 hover:text-red-800"><i class="fas fa-trash"></i></button></td>
-                </tr>
-              `).join('')}
-              ${localData.libur.length === 0 ? '<tr><td colspan="3" class="p-4 text-center text-gray-400">Belum ada data hari libur</td></tr>' : ''}
-            </tbody>
-          </table>
-        </div>
-      </div>
-    `;
-  }
-  
-  function showTambahLibur() {
-    Swal.fire({
-      title: 'Tambah Hari Libur',
-      html: `
-        <input type="date" id="tanggal" class="swal2-input">
-        <input id="keterangan" class="swal2-input" placeholder="Keterangan">
-      `,
-      preConfirm: () => ({
-        tanggal: document.getElementById('tanggal').value,
-        keterangan: document.getElementById('keterangan').value
-      })
-    }).then((res) => {
-      if (res.isConfirmed) {
-        localData.libur.push({ ...res.value, id: Date.now(), createdAt: new Date().toISOString() });
-        saveLocalData();
-        addNotification('Hari Libur', `📅 ${res.value.tanggal}: ${res.value.keterangan}`, 'all');
-        showToast('Sukses', 'Libur ditambahkan', 'success');
-        loadKelolaLibur();
-      }
-    });
-  }
-  
-  function hapusLibur(tanggal) {
-    Swal.fire({
-      title: 'Hapus libur?',
-      text: `Hari libur tanggal ${tanggal} akan dihapus`,
-      icon: 'warning',
-      showCancelButton: true,
-      confirmButtonText: 'Ya, hapus',
-      cancelButtonText: 'Batal'
-    }).then((result) => {
-      if (result.isConfirmed) {
-        localData.libur = localData.libur.filter(l => l.tanggal !== tanggal);
-        saveLocalData();
-        showToast('Sukses', 'Libur dihapus', 'success');
-        loadKelolaLibur();
-      }
-    });
-  }
-  
-  // ======================= PENGUMUMAN =======================
-  function showPengumumanModal() {
-    Swal.fire({
-      title: 'Buat Pengumuman',
-      html: `
-        <input id="judul" class="swal2-input" placeholder="Judul Pengumuman">
-        <textarea id="isi" class="swal2-textarea" placeholder="Isi pengumuman..." rows="3"></textarea>
-      `,
-      confirmButtonText: 'Kirim ke Semua',
-      preConfirm: () => ({
-        judul: document.getElementById('judul').value,
-        isi: document.getElementById('isi').value
-      })
-    }).then((res) => {
-      if (res.isConfirmed && res.value.judul && res.value.isi) {
-        localData.pengumuman.unshift({
-          ...res.value,
-          id: Date.now(),
-          createdAt: new Date().toISOString()
-        });
-        saveLocalData();
-        addNotification(`📢 ${res.value.judul}`, res.value.isi, 'all');
-        showToast('Sukses', 'Pengumuman dikirim ke semua siswa', 'success');
-      }
-    });
-  }
-  
-  // ======================= QR CODE SISWA =======================
-  function loadQRCodeSiswa() {
-    document.getElementById('pageTitle').innerHTML = 'Kartu Digital';
-    document.getElementById('mainContentArea').innerHTML = `
-      <div class="flex justify-center items-center min-h-[80vh]">
-        <div class="bg-white rounded-2xl shadow-xl overflow-hidden max-w-md w-full">
-          <div class="bg-gradient-to-r from-indigo-600 to-purple-600 p-6 text-white text-center">
-            <div class="w-20 h-20 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-3">
-              <i class="fas fa-user-graduate text-4xl"></i>
-            </div>
-            <h3 class="font-bold text-xl">${currentUser.nama}</h3>
-            <p class="text-sm opacity-90">NISN: ${currentUser.nisn}</p>
-            <p class="text-sm opacity-75">Kelas: ${currentUser.kelas || '-'}</p>
-          </div>
-          <div class="p-8 text-center">
-            <div id="qrcode" class="flex justify-center mb-4"></div>
-            <p class="text-sm text-gray-500 mb-4">Scan kode ini untuk melakukan absensi</p>
-            <button onclick="downloadQR()" class="bg-indigo-600 text-white px-6 py-3 rounded-xl text-sm w-full hover:bg-indigo-700 transition">
-              <i class="fas fa-download mr-2"></i> Simpan Kartu
-            </button>
-          </div>
-        </div>
-      </div>
-    `;
-    new QRCode(document.getElementById("qrcode"), { text: currentUser.nisn, width: 200, height: 200, colorDark: "#1a1967" });
-  }
-  
-  function downloadQR() {
-    const qrImg = document.querySelector('#qrcode img');
-    if (qrImg) {
-      const link = document.createElement('a');
-      link.download = 'qrcode.png';
-      link.href = qrImg.src;
-      link.click();
-    } else {
-      showToast('Error', 'QR Code belum siap', 'error');
-    }
-  }
-  
-  // ======================= INITIALIZATION =======================
-  window.addEventListener('load', () => {
-    let w = 0;
-    const interval = setInterval(() => {
-      w += 10;
-      if (w >= 100) clearInterval(interval);
-      const prog = document.getElementById('splashProgress');
-      if (prog) prog.style.width = w + '%';
-    }, 80);
-    
-    setTimeout(() => {
-      const splash = document.getElementById('splashScreen');
-      if (splash) {
-        splash.style.opacity = '0';
-        setTimeout(() => splash.style.display = 'none', 500);
-      }
-    }, 1500);
-    
-    const updateDate = () => {
-      const dateEl = document.getElementById('currentDateDisplay');
-      if (dateEl) {
-        dateEl.innerHTML = new Date().toLocaleDateString('id-ID', {
-          weekday: 'short',
-          day: 'numeric',
-          month: 'short',
-          year: 'numeric'
-        });
-      }
-    };
-    updateDate();
-    setInterval(updateDate, 60000);
-    updateLiveClock();
-    setInterval(updateLiveClock, 1000);
-    
-    const mobileBtn = document.getElementById('mobileMenuBtn');
-    const resizeHandler = () => {
-      if (mobileBtn) mobileBtn.style.display = window.innerWidth < 768 ? 'block' : 'none';
-    };
-    resizeHandler();
-    window.addEventListener('resize', resizeHandler);
+  loadNotifications();
+}
+
+function manualInputNISN() {
+  Swal.fire({
+    title: 'Input NISN',
+    input: 'text',
+    inputPlaceholder: 'Masukkan NISN siswa',
+    showCancelButton: true,
+    confirmButtonText: 'Proses'
+  }).then((res) => {
+    if (res.isConfirmed) processScan(res.value);
   });
+}
+
+// ======================= KELOLA ABSENSI =======================
+async function loadKelolaAbsensi() {
+  document.getElementById('pageTitle').innerHTML = 'Kelola Absensi';
+  showLoading();
+  await loadSiswaFromAPI();
+  const today = new Date().toISOString().split('T')[0];
+  const todayAbsen = localData.absensi.filter(a => a.tanggal === today);
+  hideLoading();
   
-  // Cek session tersimpan
-  const savedSession = localStorage.getItem('session');
-  if (savedSession) {
-    try {
-      currentUser = JSON.parse(savedSession);
-      document.getElementById('loginPage').style.display = 'none';
-      document.getElementById('dashboardContainer').style.display = 'block';
-      initDashboard();
-    } catch(e) {
-      console.log('Session error:', e);
+  document.getElementById('mainContentArea').innerHTML = `
+    <div class="bg-white rounded-xl p-4 shadow-sm mb-4 flex justify-between items-center flex-wrap gap-3">
+      <h3 class="font-semibold"><i class="fas fa-calendar-day mr-2 text-indigo-600"></i>Absensi Hari Ini: ${new Date().toLocaleDateString('id-ID')}</h3>
+      <button onclick="exportTodayAbsen()" class="bg-green-600 text-white px-4 py-2 rounded-lg text-sm"><i class="fas fa-download mr-1"></i> Export Hari Ini</button>
+    </div>
+    <div class="bg-white rounded-xl shadow-sm overflow-hidden">
+      <div class="overflow-x-auto"><table class="w-full text-sm"><thead class="bg-gray-50"><tr><th class="p-3">NISN</th><th class="p-3">Nama</th><th class="p-3">Kelas</th><th class="p-3 text-center">Status</th><th class="p-3 text-center">Jam Datang</th><th class="p-3 text-center">Jam Pulang</th><th class="p-3 text-center">Aksi</th></tr></thead><tbody>${siswaData.map(s => { const a = todayAbsen.find(ab => ab.nisn == s.nisn); return `<tr class="border-t"><td class="p-3">${s.nisn}<td class="p-3">${s.nama}<td class="p-3">${s.kelas || '-'}<td class="p-3 text-center"><span class="px-2 py-1 rounded-full text-xs ${getStatusClass(a?.status || 'Belum')}">${a?.status || 'Belum'}</span><td class="p-3 text-center">${a?.jamDatang || '-'}<td class="p-3 text-center">${a?.jamPulang || '-'}<td class="p-3 text-center"><button onclick="updateAbsenStatus('${s.nisn}','${s.nama}','${a?.status || 'Belum'}')" class="bg-indigo-100 text-indigo-700 px-2 py-1 rounded text-xs">Update</button>`; }).join('')}</tbody>}</div>
+    </div>
+  `;
+}
+
+function getStatusClass(status) {
+  const classes = { Hadir: 'bg-green-100 text-green-700', Sakit: 'bg-yellow-100 text-yellow-700', Izin: 'bg-blue-100 text-blue-700', Alpa: 'bg-red-100 text-red-700', Belum: 'bg-gray-100 text-gray-600' };
+  return classes[status] || classes.Belum;
+}
+
+function updateAbsenStatus(nisn, nama, currentStatus) {
+  const now = new Date();
+  const currentTime = now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  Swal.fire({
+    title: `Update Absen: ${nama}`,
+    html: `<select id="newStatus" class="w-full p-2 border rounded-lg mb-3"><option value="Hadir" ${currentStatus === 'Hadir' ? 'selected' : ''}>Hadir</option><option value="Sakit" ${currentStatus === 'Sakit' ? 'selected' : ''}>Sakit</option><option value="Izin" ${currentStatus === 'Izin' ? 'selected' : ''}>Izin</option><option value="Alpa" ${currentStatus === 'Alpa' ? 'selected' : ''}>Alpa</option></select><input type="time" id="jamDatang" class="w-full p-2 border rounded-lg mb-2" placeholder="Jam Datang" value="${currentTime}"><input type="time" id="jamPulang" class="w-full p-2 border rounded-lg" placeholder="Jam Pulang">`,
+    confirmButtonText: 'Simpan',
+    preConfirm: () => ({ status: document.getElementById('newStatus').value, jamDatang: document.getElementById('jamDatang').value, jamPulang: document.getElementById('jamPulang').value })
+  }).then((res) => {
+    if (res.isConfirmed) {
+      const today = new Date().toISOString().split('T')[0];
+      const idx = localData.absensi.findIndex(a => a.nisn == nisn && a.tanggal === today);
+      if (idx !== -1) {
+        localData.absensi[idx] = { ...localData.absensi[idx], status: res.value.status, jamDatang: res.value.jamDatang || localData.absensi[idx].jamDatang, jamPulang: res.value.jamPulang || localData.absensi[idx].jamPulang };
+      } else {
+        localData.absensi.push({ nisn, nama, tanggal: today, jamDatang: res.value.jamDatang, jamPulang: res.value.jamPulang, status: res.value.status, petugas: currentUser.nama });
+      }
+      saveLocalData();
+      addNotification('Update Absen', `Status ${nama} diubah menjadi ${res.value.status} oleh ${currentUser.nama}`, 'admin');
+      addNotification('Status Absen', `Status absen Anda pada hari ini diubah menjadi ${res.value.status}`, 'siswa', nisn);
+      showToast('Sukses', 'Status absen diupdate', 'success');
+      loadKelolaAbsensi();
+      if (currentUser.role === 'siswa') loadSiswaDashboard();
+    }
+  });
+}
+
+function exportTodayAbsen() {
+  const today = new Date().toISOString().split('T')[0];
+  const todayAbsen = localData.absensi.filter(a => a.tanggal === today);
+  const exportData = siswaData.map(s => {
+    const absen = todayAbsen.find(a => a.nisn == s.nisn);
+    return { NISN: s.nisn, Nama: s.nama, Kelas: s.kelas || '-', Status: absen?.status || 'Belum', 'Jam Datang': absen?.jamDatang || '-', 'Jam Pulang': absen?.jamPulang || '-' };
+  });
+  const ws = XLSX.utils.json_to_sheet(exportData);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, `Absensi_${today}`);
+  XLSX.writeFile(wb, `absensi_${today}.xlsx`);
+  showToast('Sukses', 'File Excel berhasil diunduh', 'success');
+}
+
+// ======================= REKAP ABSENSI =======================
+function loadRekapAbsensi() {
+  document.getElementById('pageTitle').innerHTML = 'Rekap Absensi';
+  const today = new Date().toISOString().split('T')[0];
+  const startDate = new Date(); startDate.setDate(1);
+  document.getElementById('mainContentArea').innerHTML = `
+    <div class="bg-white rounded-xl p-5 shadow-sm max-w-2xl mx-auto">
+      <h3 class="font-semibold text-lg mb-4"><i class="fas fa-chart-line mr-2 text-indigo-600"></i>Rekap Absensi</h3>
+      <div class="space-y-4">
+        <div><label class="block text-sm font-medium mb-1">Tanggal Mulai</label><input type="date" id="startDate" class="w-full p-2 border rounded-lg" value="${startDate.toISOString().split('T')[0]}"></div>
+        <div><label class="block text-sm font-medium mb-1">Tanggal Akhir</label><input type="date" id="endDate" class="w-full p-2 border rounded-lg" value="${today}"></div>
+        <div><label class="block text-sm font-medium mb-1">Pilih Kelas (Opsional)</label><select id="filterKelas" class="w-full p-2 border rounded-lg"><option value="">Semua Kelas</option>${[...new Set(siswaData.map(s => s.kelas).filter(Boolean))].map(k => `<option value="${k}">${k}</option>`).join('')}</select></div>
+        <button onclick="generateRekapExcel()" class="w-full bg-green-600 text-white py-2 rounded-lg font-semibold hover:bg-green-700 transition"><i class="fas fa-file-excel mr-2"></i>Export ke Excel</button>
+      </div>
+    </div>
+  `;
+}
+
+function generateRekapExcel() {
+  const startDate = document.getElementById('startDate').value;
+  const endDate = document.getElementById('endDate').value;
+  const filterKelas = document.getElementById('filterKelas').value;
+  if (!startDate || !endDate) { showToast('Error', 'Pilih tanggal mulai dan akhir', 'error'); return; }
+  let filteredAbsensi = localData.absensi.filter(a => a.tanggal >= startDate && a.tanggal <= endDate);
+  let filteredSiswa = siswaData;
+  if (filterKelas) filteredSiswa = filteredSiswa.filter(s => s.kelas === filterKelas);
+  const rekapData = filteredSiswa.map(s => {
+    const absenSiswa = filteredAbsensi.filter(a => a.nisn == s.nisn);
+    return { NISN: s.nisn, Nama: s.nama, Kelas: s.kelas || '-', Hadir: absenSiswa.filter(a => a.status === 'Hadir').length, Sakit: absenSiswa.filter(a => a.status === 'Sakit').length, Izin: absenSiswa.filter(a => a.status === 'Izin').length, Alpa: absenSiswa.filter(a => a.status === 'Alpa').length, 'Total Hari': absenSiswa.length };
+  });
+  const ws = XLSX.utils.json_to_sheet(rekapData);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, `Rekap_Absensi_${startDate}_sd_${endDate}`);
+  XLSX.writeFile(wb, `rekap_absensi_${startDate}_${endDate}.xlsx`);
+  showToast('Sukses', 'File rekap Excel berhasil diunduh', 'success');
+}
+
+// ======================= DASHBOARD GURU =======================
+async function loadGuruDashboard() {
+  document.getElementById('pageTitle').innerHTML = 'Dashboard Guru';
+  showLoading();
+  await loadSiswaFromAPI();
+  const today = new Date().toISOString().split('T')[0];
+  const hadirToday = localData.absensi.filter(a => a.tanggal === today && a.status === 'Hadir').length;
+  hideLoading();
+  document.getElementById('mainContentArea').innerHTML = `
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+      <div class="bg-white p-5 rounded-xl shadow-sm border-l-4 border-indigo-500"><p class="text-gray-400 text-sm">Total Siswa</p><p class="text-3xl font-bold text-indigo-600">${siswaData.length}</p></div>
+      <div class="bg-white p-5 rounded-xl shadow-sm border-l-4 border-green-500"><p class="text-gray-400 text-sm">Hadir Hari Ini</p><p class="text-3xl font-bold text-green-600">${hadirToday}</p></div>
+    </div>
+    <div class="grid grid-cols-2 gap-4"><button onclick="loadMonitoring()" class="bg-indigo-600 text-white py-4 rounded-xl font-semibold">Monitoring</button><button onclick="loadScanAbsensi()" class="bg-emerald-600 text-white py-4 rounded-xl font-semibold">Scan QR</button></div>
+  `;
+}
+
+// ======================= MONITORING =======================
+async function loadMonitoring() {
+  document.getElementById('pageTitle').innerHTML = 'Monitoring Kehadiran';
+  showLoading();
+  await loadSiswaFromAPI();
+  const today = new Date().toISOString().split('T')[0];
+  const todayAbsen = localData.absensi.filter(a => a.tanggal === today);
+  hideLoading();
+  document.getElementById('mainContentArea').innerHTML = `
+    <div class="bg-white rounded-xl p-4 shadow-sm mb-4"><input type="text" id="searchMonitoring" placeholder="🔍 Cari nama atau NISN..." class="w-full px-4 py-2 border rounded-lg text-sm"></div>
+    <div class="bg-white rounded-xl shadow-sm overflow-hidden"><div class="overflow-x-auto"><table class="w-full text-sm"><thead class="bg-gray-50"><tr><th class="p-3">NISN</th><th class="p-3">Nama</th><th class="p-3">Kelas</th><th class="p-3 text-center">Status</th><th class="p-3 text-center">Jam Datang</th><th class="p-3 text-center">Jam Pulang</th></tr></thead><tbody id="monitoringTable">${siswaData.map(s => { const a = todayAbsen.find(x => x.nisn == s.nisn); return `<tr class="border-t"><td class="p-3">${s.nisn}<td class="p-3 font-medium">${s.nama}<td class="p-3">${s.kelas || '-'}<td class="p-3 text-center"><span class="px-2 py-1 rounded-full text-xs ${getStatusClass(a?.status || 'Belum')}">${a?.status || 'Belum'}</span><td class="p-3 text-center">${a?.jamDatang || '-'}<td class="p-3 text-center">${a?.jamPulang || '-'}`; }).join('')}</tbody>}</div></div>
+  `;
+  document.getElementById('searchMonitoring')?.addEventListener('keyup', (e) => { const val = e.target.value.toLowerCase(); document.querySelectorAll('#monitoringTable tr').forEach(r => { r.style.display = r.innerText.toLowerCase().includes(val) ? '' : 'none'; }); });
+}
+
+// ======================= DATA GURU =======================
+function loadDataGuru() {
+  document.getElementById('pageTitle').innerHTML = 'Data Guru';
+  document.getElementById('mainContentArea').innerHTML = `
+    <div class="bg-white rounded-xl p-4 shadow-sm mb-4 flex gap-3 flex-wrap"><button onclick="showTambahGuru()" class="bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm"><i class="fas fa-plus mr-1"></i> Tambah Guru</button><input type="text" id="searchGuru" placeholder="🔍 Cari..." class="flex-1 px-3 py-2 border rounded-lg text-sm"></div>
+    <div class="bg-white rounded-xl shadow-sm overflow-hidden"><div class="overflow-x-auto"><table class="w-full text-sm"><thead class="bg-gray-50"><tr><th class="p-3">Username</th><th class="p-3">Nama</th><th class="p-3">Kelas</th><th class="p-3 text-center">Aksi</th></tr></thead><tbody id="guruTable">${localData.guru.map(g => `<tr class="border-t"><td class="p-3">${g.username}<td class="p-3 font-medium">${g.nama}<td class="p-3">${g.kelas || '-'}<td class="p-3 text-center"><button onclick="hapusGuru('${g.username}')" class="text-red-600"><i class="fas fa-trash"></i></button>`).join('')}</tbody>}</div>
+  `;
+  document.getElementById('searchGuru')?.addEventListener('keyup', (e) => { const val = e.target.value.toLowerCase(); document.querySelectorAll('#guruTable tr').forEach(r => { r.style.display = r.innerText.toLowerCase().includes(val) ? '' : 'none'; }); });
+}
+
+function showTambahGuru() {
+  Swal.fire({ title: 'Tambah Guru', html: '<input id="username" class="swal2-input" placeholder="Username"><input id="nama" class="swal2-input" placeholder="Nama Lengkap"><input id="password" class="swal2-input" type="password" placeholder="Password"><input id="kelas" class="swal2-input" placeholder="Kelas (opsional)">', preConfirm: () => ({ username: document.getElementById('username').value, nama: document.getElementById('nama').value, password: document.getElementById('password').value, kelas: document.getElementById('kelas').value }) }).then((res) => { if (res.isConfirmed) { localData.guru.push({ ...res.value, id: Date.now(), createdAt: new Date().toISOString() }); saveLocalData(); showToast('Sukses', 'Guru ditambahkan', 'success'); loadDataGuru(); } });
+}
+
+function hapusGuru(username) {
+  Swal.fire({ title: 'Yakin hapus?', text: `Guru "${username}" akan dihapus`, icon: 'warning', showCancelButton: true }).then((result) => { if (result.isConfirmed) { localData.guru = localData.guru.filter(g => g.username !== username); saveLocalData(); showToast('Sukses', 'Guru dihapus', 'success'); loadDataGuru(); } });
+}
+
+// ======================= IZIN =======================
+function loadIzinList() {
+  const statusClass = { pending: 'bg-yellow-100 text-yellow-700', disetujui: 'bg-green-100 text-green-700', ditolak: 'bg-red-100 text-red-700' };
+  const statusText = { pending: 'Menunggu', disetujui: 'Disetujui', ditolak: 'Ditolak' };
+  document.getElementById('pageTitle').innerHTML = 'Kelola Izin';
+  document.getElementById('mainContentArea').innerHTML = `<div class="bg-white rounded-xl shadow-sm overflow-hidden"><div class="overflow-x-auto"><table class="w-full text-sm"><thead class="bg-gray-50"><tr><th class="p-3">Tanggal</th><th class="p-3">NISN</th><th class="p-3">Nama</th><th class="p-3">Keterangan</th><th class="p-3 text-center">Status</th><th class="p-3 text-center">Aksi</th></tr></thead><tbody>${localData.izin.length === 0 ? '<tr><td colspan="6" class="p-4 text-center text-gray-400">Belum ada pengajuan izin</td>' : localData.izin.map(i => `<tr class="border-t"><td class="p-3">${i.tanggal}<td class="p-3">${i.nisn}<td class="p-3 font-medium">${i.nama}<td class="p-3">${i.keterangan}<td class="p-3 text-center"><span class="px-2 py-1 rounded-full text-xs ${statusClass[i.status]}">${statusText[i.status]}</span><td class="p-3 text-center">${i.status === 'pending' ? `<button onclick="approveIzin('${i.id}','${i.nisn}','${i.tanggal}')" class="text-green-600 mr-2"><i class="fas fa-check"></i></button><button onclick="rejectIzin('${i.id}','${i.nisn}','${i.tanggal}')" class="text-red-600"><i class="fas fa-times"></i></button>` : '-'}</td></tr>`).join('')}</tbody>}</div>`;
+}
+
+function approveIzin(id, nisn, tanggal) { const izin = localData.izin.find(i => i.id == id); if (izin) izin.status = 'disetujui'; saveLocalData(); addNotification('Izin Disetujui', `✅ Izin Anda pada tanggal ${tanggal} disetujui`, 'siswa', nisn); showToast('Sukses', 'Izin disetujui', 'success'); loadIzinList(); }
+function rejectIzin(id, nisn, tanggal) { const izin = localData.izin.find(i => i.id == id); if (izin) izin.status = 'ditolak'; saveLocalData(); addNotification('Izin Ditolak', `❌ Izin Anda pada tanggal ${tanggal} ditolak`, 'siswa', nisn); showToast('Sukses', 'Izin ditolak', 'success'); loadIzinList(); }
+function showAjukanIzin() { Swal.fire({ title: 'Ajukan Izin', html: '<input type="date" id="tanggal" class="swal2-input"><textarea id="alasan" class="swal2-textarea" placeholder="Alasan izin/sakit"></textarea>', confirmButtonText: 'Ajukan', preConfirm: () => ({ tanggal: document.getElementById('tanggal').value, keterangan: document.getElementById('alasan').value }) }).then((res) => { if (res.isConfirmed && res.value.tanggal && res.value.keterangan) { localData.izin.push({ id: Date.now(), nisn: currentUser.nisn, nama: currentUser.nama, tanggal: res.value.tanggal, keterangan: res.value.keterangan, status: 'pending', createdAt: new Date().toISOString() }); saveLocalData(); addNotification('Izin Baru', `${currentUser.nama} mengajukan izin pada ${res.value.tanggal}`, 'admin'); showToast('Berhasil', 'Izin diajukan', 'success'); loadSiswaDashboard(); } else { showToast('Error', 'Tanggal dan alasan harus diisi', 'error'); } }); }
+
+// ======================= HARI LIBUR =======================
+function loadKelolaLibur() {
+  document.getElementById('pageTitle').innerHTML = 'Hari Libur';
+  document.getElementById('mainContentArea').innerHTML = `<div class="bg-white rounded-xl p-4 shadow-sm mb-4"><button onclick="showTambahLibur()" class="bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm"><i class="fas fa-plus mr-1"></i> Tambah Libur</button></div><div class="bg-white rounded-xl shadow-sm overflow-hidden"><div class="overflow-x-auto"><table class="w-full text-sm"><thead class="bg-gray-50"><tr><th class="p-3">Tanggal</th><th class="p-3">Keterangan</th><th class="p-3 text-center">Aksi</th></tr></thead><tbody>${localData.libur.map(l => `<tr class="border-t"><td class="p-3">${l.tanggal}</td><td class="p-3">${l.keterangan}</td><td class="p-3 text-center"><button onclick="hapusLibur('${l.tanggal}')" class="text-red-600"><i class="fas fa-trash"></i></button></td></tr>`).join('')}${localData.libur.length === 0 ? '<tr><td colspan="3" class="p-4 text-center text-gray-400">Belum ada data hari libur</td></tr>' : ''}</tbody>}</div></div>`;
+}
+function showTambahLibur() { Swal.fire({ title: 'Tambah Hari Libur', html: '<input type="date" id="tanggal" class="swal2-input"><input id="keterangan" class="swal2-input" placeholder="Keterangan">', preConfirm: () => ({ tanggal: document.getElementById('tanggal').value, keterangan: document.getElementById('keterangan').value }) }).then((res) => { if (res.isConfirmed) { localData.libur.push({ ...res.value, id: Date.now(), createdAt: new Date().toISOString() }); saveLocalData(); addNotification('Hari Libur', `📅 ${res.value.tanggal}: ${res.value.keterangan}`, 'all'); showToast('Sukses', 'Libur ditambahkan', 'success'); loadKelolaLibur(); } }); }
+function hapusLibur(tanggal) { Swal.fire({ title: 'Hapus libur?', text: `Hari libur tanggal ${tanggal} akan dihapus`, icon: 'warning', showCancelButton: true }).then((result) => { if (result.isConfirmed) { localData.libur = localData.libur.filter(l => l.tanggal !== tanggal); saveLocalData(); showToast('Sukses', 'Libur dihapus', 'success'); loadKelolaLibur(); } }); }
+
+// ======================= PENGUMUMAN =======================
+function showPengumumanModal() { Swal.fire({ title: 'Buat Pengumuman', html: '<input id="judul" class="swal2-input" placeholder="Judul Pengumuman"><textarea id="isi" class="swal2-textarea" placeholder="Isi pengumuman..." rows="3"></textarea>', confirmButtonText: 'Kirim ke Semua', preConfirm: () => ({ judul: document.getElementById('judul').value, isi: document.getElementById('isi').value }) }).then((res) => { if (res.isConfirmed && res.value.judul && res.value.isi) { localData.pengumuman.unshift({ ...res.value, id: Date.now(), createdAt: new Date().toISOString() }); saveLocalData(); addNotification(`📢 ${res.value.judul}`, res.value.isi, 'all'); showToast('Sukses', 'Pengumuman dikirim ke semua siswa', 'success'); } }); }
+
+// ======================= QR CODE SISWA =======================
+function loadQRCodeSiswa() {
+  document.getElementById('pageTitle').innerHTML = 'Kartu Digital';
+  document.getElementById('mainContentArea').innerHTML = `<div class="flex justify-center items-center min-h-[80vh]"><div class="bg-white rounded-2xl shadow-xl overflow-hidden max-w-md w-full"><div class="bg-gradient-to-r from-indigo-600 to-purple-600 p-6 text-white text-center"><div class="w-20 h-20 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-3"><i class="fas fa-user-graduate text-4xl"></i></div><h3 class="font-bold text-xl">${currentUser.nama}</h3><p class="text-sm opacity-90">NISN: ${currentUser.nisn}</p><p class="text-sm opacity-75">Kelas: ${currentUser.kelas || '-'}</p></div><div class="p-8 text-center"><div id="qrcode" class="flex justify-center mb-4"></div><p class="text-sm text-gray-500 mb-4">Scan kode ini untuk melakukan absensi</p><button onclick="downloadQR()" class="bg-indigo-600 text-white px-6 py-3 rounded-xl text-sm w-full hover:bg-indigo-700 transition"><i class="fas fa-download mr-2"></i> Simpan Kartu</button></div></div></div>`;
+  new QRCode(document.getElementById("qrcode"), { text: currentUser.nisn, width: 200, height: 200, colorDark: "#1a1967" });
+}
+function downloadQR() { const img = document.querySelector('#qrcode img'); if (img) { const a = document.createElement('a'); a.download = 'qrcode.png'; a.href = img.src; a.click(); } else { showToast('Error', 'QR Code belum siap', 'error'); } }
+
+// ======================= INITIALIZATION =======================
+window.addEventListener('load', function() {
+  // Splash screen progress
+  let width = 0;
+  const interval = setInterval(function() {
+    width += 10;
+    if (width >= 100) {
+      clearInterval(interval);
+    }
+    const progressBar = document.getElementById('splashProgress');
+    if (progressBar) progressBar.style.width = width + '%';
+  }, 80);
+  
+  // Hide splash screen after 1.5 seconds
+  setTimeout(function() {
+    const splash = document.getElementById('splashScreen');
+    if (splash) {
+      splash.style.opacity = '0';
+      setTimeout(function() {
+        splash.style.display = 'none';
+      }, 500);
+    }
+  }, 1500);
+  
+  // Update date
+  function updateDate() {
+    const dateEl = document.getElementById('currentDateDisplay');
+    if (dateEl) {
+      dateEl.innerHTML = new Date().toLocaleDateString('id-ID', {
+        weekday: 'short',
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric'
+      });
     }
   }
+  updateDate();
+  setInterval(updateDate, 60000);
   
-  // Expose functions ke global scope
-  window.closeNotificationPanel = closeNotificationPanel;
-  window.toggleSidebarMobile = toggleSidebarMobile;
-  window.toggleSidebarDesktop = toggleSidebarDesktop;
-  window.logout = logout;
-  window.loadAdminDashboard = loadAdminDashboard;
-  window.loadDataSiswa = loadDataSiswa;
-  window.loadDataGuru = loadDataGuru;
-  window.loadKelolaLibur = loadKelolaLibur;
-  window.loadIzinList = loadIzinList;
-  window.loadScanAbsensi = loadScanAbsensi;
-  window.loadGuruDashboard = loadGuruDashboard;
-  window.loadMonitoring = loadMonitoring;
-  window.loadSiswaDashboard = loadSiswaDashboard;
-  window.loadQRCodeSiswa = loadQRCodeSiswa;
-  window.downloadQR = downloadQR;
-  window.setScanMode = setScanMode;
-  window.manualInputNISN = manualInputNISN;
-  window.approveIzin = approveIzin;
-  window.rejectIzin = rejectIzin;
-  window.showAjukanIzin = showAjukanIzin;
-  window.showTambahGuru = showTambahGuru;
-  window.hapusGuru = hapusGuru;
-  window.showTambahLibur = showTambahLibur;
-  window.hapusLibur = hapusLibur;
-  window.showPengumumanModal = showPengumumanModal;
-  window.markNotificationRead = markNotificationRead;
-  window.loadKelolaAbsensi = loadKelolaAbsensi;
-  window.updateAbsenStatus = updateAbsenStatus;
-  window.exportTodayAbsen = exportTodayAbsen;
-  window.loadRekapAbsensi = loadRekapAbsensi;
-  window.generateRekapExcel = generateRekapExcel;
-  window.deleteNotification = deleteNotification;
-  window.deleteAllNotifications = deleteAllNotifications;
+  // Start clock
+  updateLiveClock();
+  setInterval(updateLiveClock, 1000);
+  
+  // Mobile menu button visibility
+  const mobileBtn = document.getElementById('mobileMenuBtn');
+  function handleResize() {
+    if (mobileBtn) {
+      mobileBtn.style.display = window.innerWidth < 768 ? 'block' : 'none';
+    }
+  }
+  handleResize();
+  window.addEventListener('resize', handleResize);
+});
+
+// Check saved session
+const savedSession = localStorage.getItem('session');
+if (savedSession) {
+  try {
+    currentUser = JSON.parse(savedSession);
+    document.getElementById('loginPage').style.display = 'none';
+    document.getElementById('dashboardContainer').style.display = 'block';
+    initDashboard();
+  } catch(e) {
+    console.log('Session error:', e);
+  }
+}
+
+// Expose functions to global scope
+window.closeNotificationPanel = closeNotificationPanel;
+window.toggleSidebarMobile = toggleSidebarMobile;
+window.toggleSidebarDesktop = toggleSidebarDesktop;
+window.logout = logout;
+window.loadAdminDashboard = loadAdminDashboard;
+window.loadDataSiswa = loadDataSiswa;
+window.loadDataGuru = loadDataGuru;
+window.loadKelolaLibur = loadKelolaLibur;
+window.loadIzinList = loadIzinList;
+window.loadScanAbsensi = loadScanAbsensi;
+window.loadGuruDashboard = loadGuruDashboard;
+window.loadMonitoring = loadMonitoring;
+window.loadSiswaDashboard = loadSiswaDashboard;
+window.loadQRCodeSiswa = loadQRCodeSiswa;
+window.downloadQR = downloadQR;
+window.setScanMode = setScanMode;
+window.manualInputNISN = manualInputNISN;
+window.approveIzin = approveIzin;
+window.rejectIzin = rejectIzin;
+window.showAjukanIzin = showAjukanIzin;
+window.showTambahGuru = showTambahGuru;
+window.hapusGuru = hapusGuru;
+window.showTambahLibur = showTambahLibur;
+window.hapusLibur = hapusLibur;
+window.showPengumumanModal = showPengumumanModal;
+window.markNotificationRead = markNotificationRead;
+window.loadKelolaAbsensi = loadKelolaAbsensi;
+window.updateAbsenStatus = updateAbsenStatus;
+window.exportTodayAbsen = exportTodayAbsen;
+window.loadRekapAbsensi = loadRekapAbsensi;
+window.generateRekapExcel = generateRekapExcel;
+window.deleteNotification = deleteNotification;
+window.deleteAllNotifications = deleteAllNotifications;
 </script>
 </body>
 </html>
